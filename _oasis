@@ -1,0 +1,33 @@
+OASISFormat: 0.4
+Name:        <Name>
+Version:     0.1.0
+Synopsis:    <Name>
+Authors:     Gabriel Radanne
+License:     ISC
+Plugins:     META (0.4), DevFiles (0.4)
+BuildTools:  ocamlbuild
+
+AlphaFeatures: ocamlbuild_more_args
+
+Library <name>
+  Path: src
+  Modules: <Name>
+  BuildDepends:
+
+Document "<name>"
+  Type: ocamlbuild (0.3)
+  BuildTools: ocamldoc
+  Title: API reference for <Name>
+  XOCamlbuildPath: .
+  XOCamlbuildExtraArgs:
+    "-docflags '-t <Name> -colorize-code -short-functors -charset utf-8'"
+  XOCamlbuildLibraries: <name>
+
+SourceRepository head
+  Type: git
+  Location: https://github.com/Drup/<name>.git
+  Browser: https://github.com/Drup/<name>
+
+#Local Variables:
+#compile-command: "oasis setup"
+#End:
