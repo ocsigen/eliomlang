@@ -21,7 +21,7 @@ open Compenv
 
 (* Keep in sync with the copy in optcompile.ml *)
 
-let tool_name = "ocamlc"
+let tool_name = "eliomc"
 
 let interface ppf sourcefile outputprefix =
   Compmisc.init_path false;

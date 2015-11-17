@@ -52,7 +52,7 @@ let process_file ppf name =
   else
     raise(Arg.Bad("don't know what to do with " ^ name))
 
-let usage = "Usage: ocamlc <options> <files>\nOptions are:"
+let usage = "Usage: eliomc <options> <files>\nOptions are:"
 
 let ppf = Format.err_formatter
 
@@ -200,7 +200,3 @@ let main () =
     exit 2
 
 let _ = main ()
-
-
-
-

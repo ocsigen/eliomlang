@@ -51,7 +51,7 @@ let process_file ppf name =
   else
     raise(Arg.Bad("don't know what to do with " ^ name))
 
-let usage = "Usage: ocamlopt <options> <files>\nOptions are:"
+let usage = "Usage: eliomopt <options> <files>\nOptions are:"
 
 let ppf = Format.err_formatter
 

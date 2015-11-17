@@ -22,7 +22,7 @@ open Compenv
 
 (* Keep in sync with the copy in compile.ml *)
 
-let tool_name = "ocamlopt"
+let tool_name = "eliomopt"
 
 let interface ppf sourcefile outputprefix =
   Compmisc.init_path false;
