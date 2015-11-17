@@ -1,5 +1,6 @@
 *~
 _build/
+*.byte
 *.native
 setup.bin
 setup.data

@@ -1,32 +1,37 @@
 OASISFormat: 0.4
-Name:        <Name>
+Name:        Eliom-lang
 Version:     0.1.0
-Synopsis:    <Name>
+Synopsis:    Eliom-lang
 Authors:     Gabriel Radanne
-License:     ISC
+License:     GPL
 Plugins:     META (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild
 
 AlphaFeatures: ocamlbuild_more_args
 
-Library <name>
+Executable "eliomc"
   Path: src
-  Modules: <Name>
-  BuildDepends:
+  MainIs: main.ml
+  BuildDepends: compiler-libs.bytecomp
 
-Document "<name>"
-  Type: ocamlbuild (0.3)
-  BuildTools: ocamldoc
-  Title: API reference for <Name>
-  XOCamlbuildPath: .
-  XOCamlbuildExtraArgs:
-    "-docflags '-t <Name> -colorize-code -short-functors -charset utf-8'"
-  XOCamlbuildLibraries: <name>
+Executable "eliomopt"
+  Path: src
+  MainIs: optmain.ml
+  BuildDepends: compiler-libs.optcomp
+
+# Document "eliom-lang"
+#   Type: ocamlbuild (0.3)
+#   BuildTools: ocamldoc
+#   Title: API reference for Eliom-lang
+#   XOCamlbuildPath: .
+#   XOCamlbuildExtraArgs:
+#     "-docflags '-t Eliom-lang -colorize-code -short-functors -charset utf-8'"
+#   XOCamlbuildLibraries: eliom_lang
 
 SourceRepository head
   Type: git
-  Location: https://github.com/Drup/<name>.git
-  Browser: https://github.com/Drup/<name>
+  Location: https://github.com/Drup/eliom-lang.git
+  Browser: https://github.com/Drup/eliom-lang
 
 #Local Variables:
 #compile-command: "oasis setup"
