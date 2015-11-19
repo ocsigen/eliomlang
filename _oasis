@@ -9,15 +9,27 @@ BuildTools:  ocamlbuild
 
 AlphaFeatures: ocamlbuild_more_args
 
+Library "eliom_lang"
+  FindlibName: eliom_lang
+  Path: lib
+
+Library "eliom_ppx"
+  FindlibName: ppx
+  FindlibParent: eliom_lang
+  Path: lib
+  Modules: Eliom_lang
+  InternalModules: El_utils
+  BuildDepends: compiler-libs, ppx_tools, ppx_tools.metaquot, ppx_core
+
 Executable "eliomc"
   Path: src
   MainIs: main.ml
-  BuildDepends: compiler-libs.bytecomp
+  BuildDepends: compiler-libs.bytecomp, eliom_lang.ppx
 
 Executable "eliomopt"
   Path: src
   MainIs: optmain.ml
-  BuildDepends: compiler-libs.optcomp
+  BuildDepends: compiler-libs.optcomp, eliom_lang.ppx
 
 # Document "eliom-lang"
 #   Type: ocamlbuild (0.3)
