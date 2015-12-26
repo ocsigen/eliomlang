@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: e73e389f999d865a88288ab90bc366ee)
+# DO NOT EDIT (digest: a447cb63a0bfcef7e2c5b7c74e87310d)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -19,11 +19,13 @@ true: annot, bin_annot
 # Library eliom_ppx
 "lib/eliom_ppx.cmxs": use_eliom_ppx
 <lib/*.ml{,i,y}>: pkg_compiler-libs
+<lib/*.ml{,i,y}>: pkg_ppx_core
 <lib/*.ml{,i,y}>: pkg_ppx_tools
 <lib/*.ml{,i,y}>: pkg_ppx_tools.metaquot
 # Executable eliomc
 "src/main.byte": pkg_compiler-libs
 "src/main.byte": pkg_compiler-libs.bytecomp
+"src/main.byte": pkg_ppx_core
 "src/main.byte": pkg_ppx_tools
 "src/main.byte": pkg_ppx_tools.metaquot
 "src/main.byte": use_eliom_ppx
@@ -31,11 +33,13 @@ true: annot, bin_annot
 # Executable eliomopt
 "src/optmain.byte": pkg_compiler-libs
 "src/optmain.byte": pkg_compiler-libs.optcomp
+"src/optmain.byte": pkg_ppx_core
 "src/optmain.byte": pkg_ppx_tools
 "src/optmain.byte": pkg_ppx_tools.metaquot
 "src/optmain.byte": use_eliom_ppx
 <src/*.ml{,i,y}>: pkg_compiler-libs
 <src/*.ml{,i,y}>: pkg_compiler-libs.optcomp
+<src/*.ml{,i,y}>: pkg_ppx_core
 <src/*.ml{,i,y}>: pkg_ppx_tools
 <src/*.ml{,i,y}>: pkg_ppx_tools.metaquot
 <src/*.ml{,i,y}>: use_eliom_ppx

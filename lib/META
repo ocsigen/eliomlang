@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 8585debfc3d0192c428aedb7e3491a31)
+# DO NOT EDIT (digest: 45f45aa97a64cebc76916f862840a05c)
 version = "0.1.0"
 description = "Eliom-lang"
 archive(byte) = "eliom_lang.cma"
@@ -10,7 +10,7 @@ exists_if = "eliom_lang.cma"
 package "ppx" (
  version = "0.1.0"
  description = "Eliom-lang"
- requires = "compiler-libs ppx_tools ppx_tools.metaquot"
+ requires = "compiler-libs ppx_tools ppx_tools.metaquot ppx_core"
  archive(byte) = "eliom_ppx.cma"
  archive(byte, plugin) = "eliom_ppx.cma"
  archive(native) = "eliom_ppx.cmxa"
