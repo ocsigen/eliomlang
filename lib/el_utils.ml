@@ -317,19 +317,19 @@ let prelim = object (self)
     let f c pstr =
       let loc = pstr.pstr_loc in
       match pstr.pstr_desc with
-      | Pstr_extension (({txt}, PStr strs), _)
+      | Pstr_extension (({txt}, payload), _)
         when is_annotation txt ["shared.start"; "client.start" ;"server.start"] ->
-        if strs <> [] then
-          c, [ str_error ~loc
-                 "The %%%%%s extension doesn't accept arguments." txt ]
-        else (Context.of_string txt, [])
+        begin match payload with
+          | PStr [] -> (Context.of_string txt, [])
+          | _ ->
+            c, [ str_error ~loc "Wrong payload for the %%%%%s extension." txt ]
+        end
       | Pstr_extension (({txt}, PStr strs), _)
         when is_annotation txt ["shared"; "client" ;"server"] ->
         (c, self#dispatch_str (Context.of_string txt) strs)
       | Pstr_extension (({txt}, _), _)
         when is_annotation txt ["shared"; "client" ;"server"] ->
-          c, [ str_error ~loc
-                 "Wrong payload for the %%%%%s extension." txt ]
+          c, [ str_error ~loc "Wrong payload for the %%%%%s extension." txt ]
       | _ ->
         (c, self#dispatch_str c [pstr])
     in
