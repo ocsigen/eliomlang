@@ -8,6 +8,12 @@ module AC = Ast_convenience
 
 let flatmap f l = List.flatten @@ List.map f l
 
+let rec fold_accum f l acc = match l with
+  | [] -> []
+  | h :: t ->
+    let acc, newl = f acc h in
+    newl @ fold_accum f t acc
+
 let get_extension = function
   | {pexp_desc= Pexp_extension ({txt},_)} -> txt
   | _ -> invalid_arg "Eliom ppx: Should be an extension."
@@ -25,6 +31,13 @@ let file_loc () =
 
 let eid {Location. txt ; loc } =
   Exp.ident ~loc { loc ; txt = Longident.Lident txt }
+
+let error f ?sub ?loc =
+  Format.ksprintf (fun s -> f ?loc ?attrs:None @@ AM.extension_of_error @@ Location.error ?loc ?sub s)
+
+let exp_error ?sub ~loc = error Exp.extension ?sub ~loc
+let str_error ?sub ~loc = error Str.extension ?sub ~loc
+let sig_error ?sub ~loc = error Sig.extension ?sub ~loc
 
 let format_args = function
   | [] -> AC.unit ()
@@ -131,6 +144,11 @@ module Context = struct
     | `Escaped_value (* [%shared ~%( ... ) ] *)
     | `Injection (* [%%client ~%( ... ) ] *)
   ]
+
+  type shared = [
+    | `Shared
+    | t
+  ]
 end
 
 let open_eliom_pervasives = [%stri open Eliom_pervasives ]
@@ -210,8 +228,8 @@ let collect_injections = object
       super#expression expr acc
 end
 
-let prelim = object
-  inherit [Context.t] Ppx_core.Ast_traverse.map_with_context as super
+let prelim = object (self)
+  inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
 
   method! expression context expr =
     let loc = expr.pexp_loc in
@@ -221,14 +239,14 @@ let prelim = object
       `Client
       when is_annotation txt ["client"; "shared"] ->
       let side = get_extension expr in
-      Exp.extension @@ AM.extension_of_error @@ Location.errorf ~loc
+      exp_error ~loc
         "The syntax [%%%s ...] is not allowed inside client code."
         side
     | {pexp_desc = Pexp_extension ({txt},_)}
     , (`Fragment | `Escaped_value | `Injection)
       when is_annotation txt ["client"; "shared"] ->
       let side = get_extension expr in
-      Exp.extension @@ AM.extension_of_error @@ Location.errorf ~loc
+      exp_error ~loc
         "The syntax [%%%s ...] can not be nested."
         side
 
@@ -237,7 +255,7 @@ let prelim = object
       `Server
       when is_annotation txt ["shared"] ->
       let e = Shared.expression loc frag_exp in
-      super#expression context @@ exp_add_attrs (attrs@attrs') e
+      self#expression context @@ exp_add_attrs (attrs@attrs') e
 
     (* [%client e ] with e = ... ~%x ...
 
@@ -249,7 +267,7 @@ let prelim = object
       when is_annotation txt ["client"] ->
       let frag_exp, m = collect_injections#expression frag_exp Name.Map.empty in
       let map = Name.Map.bindings m in
-      let poly_exp = [%expr assert false] in (* this expression is of type 'a . 'a *)
+      let poly_exp = [%expr assert false] in (* this expression must be of type [∀ 'a. 'a] *)
       let e =
         let f (e, s) =
           let loc = e.pexp_loc in Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
@@ -269,48 +287,13 @@ let prelim = object
           let context = `Escaped_value in
           super#expression context inj
         | `Server ->
-          Location.raise_errorf ~loc
-            "The syntax ~%% ... is not allowed inside server code."
+          exp_error ~loc "The syntax ~%% ... is not allowed inside server code."
         | `Escaped_value | `Injection ->
-          Location.raise_errorf ~loc
-            "The syntax ~%% ... can not be nested."
+          exp_error ~loc "The syntax ~%% ... can not be nested."
+        | `Shared ->
+          assert false (* TODO *)
       end
     | _ -> super#expression context expr
-
-end
-
-
-module Make (Pass : Pass) = struct
-
-  let structure_item mapper str =
-    let loc = str.pstr_loc in
-    match str.pstr_desc with
-    | Pstr_extension (({txt=("server"|"shared"|"client")}, _), _) ->
-      Location.raise_errorf ~loc
-        "Sections are only allowed at toplevel."
-    | _ -> AM.default_mapper.structure_item mapper str
-
-  let signature_item mapper sig_ =
-    let loc = sig_.psig_loc in
-    match sig_.psig_desc with
-    | Psig_extension (({txt=("server"|"shared"|"client")}, _), _) ->
-      Location.raise_errorf ~loc
-        "Sections are only allowed at toplevel."
-    | _ -> AM.default_mapper.signature_item mapper sig_
-
-  let eliom_mapper context =
-    let context = ref (context :> Context.t) in
-    { Ast_mapper.default_mapper
-      with
-        Ast_mapper.
-
-        expr = eliom_expr context ;
-
-        (* Reject sections not at toplevel. *)
-        structure_item ;
-        signature_item ;
-    }
-
 
   (** Toplevel translation *)
   (** Switch the current context when encountering [%%server] (resp. shared, client)
@@ -318,62 +301,62 @@ module Make (Pass : Pass) = struct
       structure item.
   *)
 
-  let dispatch (server, shared, client) field context str =
-    let f = match context with
-      | `Server -> server | `Shared -> shared | `Client -> client
-    in
-    let m = eliom_mapper context in
-    f @@ (field m) m str
+  method private dispatch_str context x =
+    match context with
+    | `Shared ->
+      self#structure context @@ flatmap Shared.structure_item x
+    | #Context.t as c -> List.map (self#structure_item c) x
 
-  let dispatch_str c _mapper =
-    dispatch Pass.(server_str, shared_str, client_str)
-      (fun x -> x.AM.structure_item) c
+  method private dispatch_sig context x =
+    match context with
+    | `Shared ->
+      self#signature context @@ flatmap Shared.signature_item x
+    | #Context.t as c -> List.map (self#signature_item c) x
 
-  let dispatch_sig c _mapper =
-    dispatch Pass.(server_sig, shared_sig, client_sig)
-      (fun x -> x.AM.signature_item) c
-
-  let toplevel_structure context mapper structs =
-    let f pstr =
+  method! structure context structs =
+    let f c pstr =
       let loc = pstr.pstr_loc in
       match pstr.pstr_desc with
       | Pstr_extension (({txt}, PStr strs), _)
         when is_annotation txt ["shared.start"; "client.start" ;"server.start"] ->
         if strs <> [] then
-          [ Str.extension ~loc @@ AM.extension_of_error @@ Location.errorf ~loc
-              "The %%%%%s extension doesn't accept arguments." txt ]
-        else ( context := Context.of_string txt ; [] )
+          c, [ str_error ~loc
+                 "The %%%%%s extension doesn't accept arguments." txt ]
+        else (Context.of_string txt, [])
       | Pstr_extension (({txt}, PStr strs), _)
         when is_annotation txt ["shared"; "client" ;"server"] ->
-        let c = Context.of_string txt in
-        flatmap (dispatch_str c mapper) strs
+        (c, self#dispatch_str (Context.of_string txt) strs)
+      | Pstr_extension (({txt}, _), _)
+        when is_annotation txt ["shared"; "client" ;"server"] ->
+          c, [ str_error ~loc
+                 "Wrong payload for the %%%%%s extension." txt ]
       | _ ->
-        dispatch_str !context mapper pstr
+        (c, self#dispatch_str c [pstr])
     in
-    let loc = file_loc () in
-    open_eliom_pervasives :: Pass.prelude loc @ flatmap f structs @ Pass.postlude loc
+    open_eliom_pervasives :: fold_accum f structs context
 
-  let toplevel_signature context mapper sigs =
-    let f psig =
+  method! signature context sigs =
+    let f c psig =
       let loc = psig.psig_loc in
       match psig.psig_desc with
-      | Psig_extension (({txt=("shared"|"client"|"server" as txt)}, PStr strs), _) ->
+      | Psig_extension (({txt=("shared.start"|"client.start"|"server.start" as txt)}, PStr strs), _) ->
         if strs <> [] then
-          [ Sig.extension ~loc @@ AM.extension_of_error @@ Location.errorf ~loc
+          c, [ sig_error ~loc
               "The %%%%%s extension doesn't accept arguments." txt ]
-        else ( context := Context.of_string txt ; [] )
+        else (Context.of_string txt, [])
       | _ ->
-        dispatch_sig !context mapper psig
+        (c, self#dispatch_sig c [psig])
     in
-    flatmap f sigs
-
-  let mapper args =
-    let () = match_args args in
-    let c = ref `Server in
-    {AM.default_mapper
-     with
-      structure = toplevel_structure c ;
-      signature = toplevel_signature c ;
-    }
+    fold_accum f sigs context
 
 end
+
+
+
+let mapper _args =
+  let c = `Server in
+  {AM.default_mapper
+   with
+    structure = (fun _ -> prelim#structure c) ;
+    signature = (fun _ -> prelim#signature c) ;
+  }
