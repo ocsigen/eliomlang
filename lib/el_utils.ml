@@ -173,6 +173,8 @@ let open_eliom_pervasives = [%stri open Eliom_pervasives ]
 
 module Shared = struct
 
+  type 'a t = { client : 'a ; server : 'a }
+
   let server = object
     inherit Ppx_core.Ast_traverse.map as super
     method! expression expr = match expr with
@@ -204,14 +206,14 @@ module Shared = struct
     ] [@metaloc loc]
 
   let structure_item stri =
-    let server_stri = server#structure_item stri in
-    let client_stri = client#structure_item `Top stri in
-    [ client_stri ; server_stri ]
+    let server = server#structure_item stri in
+    let client = client#structure_item `Top stri in
+    { client ; server }
 
   let signature_item sigi =
-    let server_sigi = server#signature_item sigi in
-    let client_sigi = client#signature_item `Top sigi in
-    [ client_sigi ; server_sigi ]
+    let server = server#signature_item sigi in
+    let client = client#signature_item `Top sigi in
+    { client ; server }
 
 end
 
@@ -337,7 +339,10 @@ let prelim = object (self)
   method private dispatch_str context x =
     match context with
     | `Shared ->
-      self#structure `Shared @@ flatmap Shared.structure_item x
+      let f x =
+        let x = Shared.structure_item x in
+        self#structure `Client [x.client] @ self#structure `Server [x.server]
+      in flatmap f x
     | `Client ->
       flatmap self#client_section x
     | #Context.t as c -> List.map (self#structure_item c) x
@@ -345,7 +350,10 @@ let prelim = object (self)
   method private dispatch_sig context x =
     match context with
     | `Shared ->
-      self#signature context @@ flatmap Shared.signature_item x
+      let f x =
+        let x = Shared.signature_item x in
+        self#signature `Client [x.client] @ self#signature `Server [x.server]
+      in flatmap f x
     | #Context.t as c -> List.map (self#signature_item c) x
 
   method! structure context structs =
