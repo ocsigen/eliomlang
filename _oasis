@@ -18,7 +18,7 @@ Library "eliom_ppx"
   FindlibParent: eliom_lang
   Path: lib
   Modules: Eliom_lang
-  InternalModules: El_utils
+  InternalModules: El_utils, El_desugar
   BuildDepends: compiler-libs, ppx_tools, ppx_tools.metaquot, ppx_core
 
 Executable "eliomc"
