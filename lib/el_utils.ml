@@ -215,7 +215,11 @@ module Shared = struct
 
 end
 
+(** Collect all the injection expressions and substitute them by fresh
+    variables. Returns a map from variable to injections.
 
+    Can be applied both to client section and fragments.
+*)
 let collect_injections = object
   inherit [_] Ppx_core.Ast_traverse.fold_map as super
   method! expression expr acc = match expr with
@@ -227,6 +231,28 @@ let collect_injections = object
     | _ ->
       super#expression expr acc
 end
+
+let value_binding_of_map m =
+  let f (e, s) =
+    let loc = e.pexp_loc in
+    Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
+  in
+  List.map f @@ Name.Map.bindings m
+
+(** Given a name map, create an expression of the form
+    ((fun _ _ _ -> assert false) e_1 .. e_n)
+
+    The resulting expression should be of type [∀ 'a. 'a].
+*)
+let make_poly ~loc m =
+  let l = Name.Map.bindings m in
+  let args = List.map (fun (e,_) -> ("", e)) l in
+  let assert_false = [%expr assert false][@metaloc loc] in
+  let rec aux = function
+    | [] -> assert_false
+    | _ :: t -> [%expr fun _ -> [%e aux t]][@metaloc loc]
+  in
+  Exp.apply ~loc (aux l) args
 
 let prelim = object (self)
   inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
@@ -265,15 +291,10 @@ let prelim = object (self)
     | {pexp_desc = Pexp_extension ({txt},PStr [{pstr_desc = Pstr_eval (frag_exp,attrs)}])},
       `Server
       when is_annotation txt ["client"] ->
+      let frag_exp = self#expression `Client frag_exp in
       let frag_exp, m = collect_injections#expression frag_exp Name.Map.empty in
-      let map = Name.Map.bindings m in
-      let poly_exp = [%expr assert false] in (* this expression must be of type [∀ 'a. 'a] *)
-      let e =
-        let f (e, s) =
-          let loc = e.pexp_loc in Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
-        in
-        Exp.let_ ~loc Nonrecursive (List.map f map) poly_exp
-      in
+      let poly_exp = make_poly ~loc m in
+      let e = Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp in
       let eliom_attr = Location.mkloc "eliom.fragment" loc, PStr [Str.eval frag_exp] in
       exp_add_attrs (eliom_attr :: attrs) e
 
@@ -295,16 +316,30 @@ let prelim = object (self)
       end
     | _ -> super#expression context expr
 
-  (** Toplevel translation *)
-  (** Switch the current context when encountering [%%server] (resp. shared, client)
-      annotations. Call the eliom mapper and [Pass.server_str] (resp ..) on each
-      structure item.
-  *)
+  (** Client section translation.
 
+      We collect all injections, hoist them, and hide the client code in
+      a ppx attribute. See also client fragments.
+  *)
+  method private client_section stri =
+    let loc = stri.pstr_loc in
+    let stri = self#structure_item `Client stri in
+    let stri, m = collect_injections#structure_item stri Name.Map.empty in
+    let poly_exp = make_poly ~loc m in
+    let bindings = Str.value ~loc Nonrecursive (value_binding_of_map m) in
+    let eliom_attr = Location.mkloc "eliom.section" loc, PStr [stri] in
+    let eliom_expr = exp_add_attrs [eliom_attr] poly_exp in
+    let s = [%stri let _ = [%e eliom_expr] ][@metaloc loc] in
+    [ bindings ; s ]
+
+
+  (** Toplevel translation *)
   method private dispatch_str context x =
     match context with
     | `Shared ->
-      self#structure context @@ flatmap Shared.structure_item x
+      self#structure `Shared @@ flatmap Shared.structure_item x
+    | `Client ->
+      flatmap self#client_section x
     | #Context.t as c -> List.map (self#structure_item c) x
 
   method private dispatch_sig context x =
