@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 994ea7e162f591cf515399c69cbff053) *)
+(* DO NOT EDIT (digest: 522935ea0c8f5c7024dc3bf00278b5a0) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -607,11 +607,10 @@ end
 open Ocamlbuild_plugin;;
 let package_default =
   {
-     MyOCamlbuildBase.lib_ocaml =
-       [("eliom_lang", ["lib"], []); ("eliom_ppx", ["lib"], [])];
+     MyOCamlbuildBase.lib_ocaml = [("eliom_lang", ["lib"], [])];
      lib_c = [];
      flags = [];
-     includes = [("src", ["lib"])]
+     includes = [("utils", ["lib"]); ("src", ["lib"])]
   }
   ;;
 
@@ -619,19 +618,16 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 623 "myocamlbuild.ml"
+# 622 "myocamlbuild.ml"
 (* OASIS_STOP *)
 open Ocamlbuild_plugin
 
 let doc_intro = "index.text"
 
-let () =
-  dispatch
-    (function hook ->
-      dispatch_default hook ;
-      match hook with
-        | After_rules ->
-            dep ["ocaml"; "doc"; "extension:html"] & [doc_intro] ;
-            flag ["ocaml"; "doc"; "extension:html"] & S[A"-intro"; P doc_intro];
-        | _ -> ()
-    )
+let my_dispatch = function
+  | After_rules ->
+    dep ["ocaml"; "doc"; "extension:html"] & [doc_intro] ;
+    flag ["ocaml"; "doc"; "extension:html"] & S[A"-intro"; P doc_intro];
+  | _ -> ()
+
+let () = dispatch (fun hook -> my_dispatch hook; dispatch_default hook)

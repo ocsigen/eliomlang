@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: a447cb63a0bfcef7e2c5b7c74e87310d)
+# DO NOT EDIT (digest: a2b5c85c30327770ba3c17699ede8460)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -16,33 +16,42 @@ true: annot, bin_annot
 "_darcs": not_hygienic
 # Library eliom_lang
 "lib/eliom_lang.cmxs": use_eliom_lang
-# Library eliom_ppx
-"lib/eliom_ppx.cmxs": use_eliom_ppx
-<lib/*.ml{,i,y}>: pkg_compiler-libs
-<lib/*.ml{,i,y}>: pkg_ppx_core
-<lib/*.ml{,i,y}>: pkg_ppx_tools
-<lib/*.ml{,i,y}>: pkg_ppx_tools.metaquot
+<lib/*.ml{,i,y}>: package(compiler-libs)
+<lib/*.ml{,i,y}>: package(ppx_core)
+<lib/*.ml{,i,y}>: package(ppx_tools)
+<lib/*.ml{,i,y}>: package(ppx_tools.metaquot)
+# Executable desugar
+"utils/desugar.byte": package(compiler-libs)
+"utils/desugar.byte": package(ppx_core)
+"utils/desugar.byte": package(ppx_tools)
+"utils/desugar.byte": package(ppx_tools.metaquot)
+"utils/desugar.byte": use_eliom_lang
+<utils/*.ml{,i,y}>: package(compiler-libs)
+<utils/*.ml{,i,y}>: package(ppx_core)
+<utils/*.ml{,i,y}>: package(ppx_tools)
+<utils/*.ml{,i,y}>: package(ppx_tools.metaquot)
+<utils/*.ml{,i,y}>: use_eliom_lang
 # Executable eliomc
-"src/main.byte": pkg_compiler-libs
-"src/main.byte": pkg_compiler-libs.bytecomp
-"src/main.byte": pkg_ppx_core
-"src/main.byte": pkg_ppx_tools
-"src/main.byte": pkg_ppx_tools.metaquot
-"src/main.byte": use_eliom_ppx
-<src/*.ml{,i,y}>: pkg_compiler-libs.bytecomp
+"src/main.byte": package(compiler-libs)
+"src/main.byte": package(compiler-libs.bytecomp)
+"src/main.byte": package(ppx_core)
+"src/main.byte": package(ppx_tools)
+"src/main.byte": package(ppx_tools.metaquot)
+"src/main.byte": use_eliom_lang
+<src/*.ml{,i,y}>: package(compiler-libs.bytecomp)
 # Executable eliomopt
-"src/optmain.byte": pkg_compiler-libs
-"src/optmain.byte": pkg_compiler-libs.optcomp
-"src/optmain.byte": pkg_ppx_core
-"src/optmain.byte": pkg_ppx_tools
-"src/optmain.byte": pkg_ppx_tools.metaquot
-"src/optmain.byte": use_eliom_ppx
-<src/*.ml{,i,y}>: pkg_compiler-libs
-<src/*.ml{,i,y}>: pkg_compiler-libs.optcomp
-<src/*.ml{,i,y}>: pkg_ppx_core
-<src/*.ml{,i,y}>: pkg_ppx_tools
-<src/*.ml{,i,y}>: pkg_ppx_tools.metaquot
-<src/*.ml{,i,y}>: use_eliom_ppx
+"src/optmain.byte": package(compiler-libs)
+"src/optmain.byte": package(compiler-libs.optcomp)
+"src/optmain.byte": package(ppx_core)
+"src/optmain.byte": package(ppx_tools)
+"src/optmain.byte": package(ppx_tools.metaquot)
+"src/optmain.byte": use_eliom_lang
+<src/*.ml{,i,y}>: package(compiler-libs)
+<src/*.ml{,i,y}>: package(compiler-libs.optcomp)
+<src/*.ml{,i,y}>: package(ppx_core)
+<src/*.ml{,i,y}>: package(ppx_tools)
+<src/*.ml{,i,y}>: package(ppx_tools.metaquot)
+<src/*.ml{,i,y}>: use_eliom_lang
 # OASIS_STOP
 
 true: warn(+A-4-6-9-40-42-44-48)
