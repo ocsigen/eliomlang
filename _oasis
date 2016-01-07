@@ -23,15 +23,15 @@ Executable "desugar"
   MainIs: desugar.ml
   BuildDepends: eliom_lang
 
-Executable "eliomc"
-  Path: src
-  MainIs: main.ml
-  BuildDepends: compiler-libs.bytecomp, eliom_lang
+# Executable "eliomc"
+#   Path: src
+#   MainIs: main.ml
+#   BuildDepends: compiler-libs.bytecomp, eliom_lang
 
-Executable "eliomopt"
-  Path: src
-  MainIs: optmain.ml
-  BuildDepends: compiler-libs.optcomp, eliom_lang
+# Executable "eliomopt"
+#   Path: src
+#   MainIs: optmain.ml
+#   BuildDepends: compiler-libs.optcomp, eliom_lang
 
 # Document "eliom-lang"
 #   Type: ocamlbuild (0.3)

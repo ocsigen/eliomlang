@@ -77,7 +77,7 @@ end
 let make_poly ~loc m =
   let l = Name.Map.bindings m in
   let args = List.map
-      (fun (_,v) -> ("", Ppx_core.Ast_builder.Default.evar ~loc v))
+      (fun (_,v) -> (Asttypes.Nolabel, Ppx_core.Ast_builder.Default.evar ~loc v))
       l
   in
   let assert_false = [%expr assert false][@metaloc loc] in

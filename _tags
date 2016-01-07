@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: a2b5c85c30327770ba3c17699ede8460)
+# DO NOT EDIT (digest: 786bfe922ad72583627a40a9f33a1ea9)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -31,27 +31,6 @@ true: annot, bin_annot
 <utils/*.ml{,i,y}>: package(ppx_tools)
 <utils/*.ml{,i,y}>: package(ppx_tools.metaquot)
 <utils/*.ml{,i,y}>: use_eliom_lang
-# Executable eliomc
-"src/main.byte": package(compiler-libs)
-"src/main.byte": package(compiler-libs.bytecomp)
-"src/main.byte": package(ppx_core)
-"src/main.byte": package(ppx_tools)
-"src/main.byte": package(ppx_tools.metaquot)
-"src/main.byte": use_eliom_lang
-<src/*.ml{,i,y}>: package(compiler-libs.bytecomp)
-# Executable eliomopt
-"src/optmain.byte": package(compiler-libs)
-"src/optmain.byte": package(compiler-libs.optcomp)
-"src/optmain.byte": package(ppx_core)
-"src/optmain.byte": package(ppx_tools)
-"src/optmain.byte": package(ppx_tools.metaquot)
-"src/optmain.byte": use_eliom_lang
-<src/*.ml{,i,y}>: package(compiler-libs)
-<src/*.ml{,i,y}>: package(compiler-libs.optcomp)
-<src/*.ml{,i,y}>: package(ppx_core)
-<src/*.ml{,i,y}>: package(ppx_tools)
-<src/*.ml{,i,y}>: package(ppx_tools.metaquot)
-<src/*.ml{,i,y}>: use_eliom_lang
 # OASIS_STOP
 
 # Work around ppx_core issues

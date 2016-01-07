@@ -1,5 +1,6 @@
+[@@@ocaml.warning "-3"]
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 522935ea0c8f5c7024dc3bf00278b5a0) *)
+(* DO NOT EDIT (digest: 0ff3e35c4df7d726e126b0ce3725bfc5) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -610,7 +611,7 @@ let package_default =
      MyOCamlbuildBase.lib_ocaml = [("eliom_lang", ["lib"], [])];
      lib_c = [];
      flags = [];
-     includes = [("utils", ["lib"]); ("src", ["lib"])]
+     includes = [("utils", ["lib"])]
   }
   ;;
 
