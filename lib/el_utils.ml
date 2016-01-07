@@ -65,8 +65,17 @@ let position loc =
   let stop = loc.Location.loc_start in
   Exp.tuple ~loc [ lexing_position ~loc start ; lexing_position ~loc stop ]
 
+let rec get_attr s = function
+  | ({Location.txt}, stri) :: _ when txt = s -> Some stri
+  | _ :: t -> get_attr s t
+  | [] -> None
+
 let is_annotation txt l =
   List.exists (fun s -> txt = s || txt = "eliom."^s) l
+
+(** Internal attributes *)
+let eliom_section_attr = "eliom.section"
+let eliom_fragment_attr = "eliom.fragment"
 
 (** Identifiers generation. *)
 module Name = struct

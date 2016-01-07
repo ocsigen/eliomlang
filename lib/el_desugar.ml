@@ -125,7 +125,7 @@ let mapper = object (self)
       let frag_exp, m = collect_injections#expression frag_exp Name.Map.empty in
       let poly_exp = make_poly ~loc m in
       let e = Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp in
-      let eliom_attr = Location.mkloc "eliom.fragment" loc, PStr [Str.eval frag_exp] in
+      let eliom_attr = Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp] in
       exp_add_attrs (eliom_attr :: attrs) e
 
     (* ~%( ... ) ] *)
@@ -150,6 +150,12 @@ let mapper = object (self)
 
       We collect all injections, hoist them, and hide the client code in
       a ppx attribute. See also client fragments.
+
+      The resulting code is of this shape:
+
+      let x1 = e1 and ...
+      let _ = ((fun _ _ -> assert false) x1 ...)
+        [@@eliom.section client_str]
   *)
   method private client_section stri =
     let loc = stri.pstr_loc in
@@ -157,9 +163,10 @@ let mapper = object (self)
     let stri, m = collect_injections#structure_item stri Name.Map.empty in
     let poly_exp = make_poly ~loc m in
     let bindings = Str.value ~loc Nonrecursive (value_binding_of_map m) in
-    let eliom_attr = Location.mkloc "eliom.section" loc, PStr [stri] in
-    let eliom_expr = exp_add_attrs [eliom_attr] poly_exp in
-    let s = [%stri let _ = [%e eliom_expr] ][@metaloc loc] in
+    let attrs = [Location.mkloc eliom_section_attr loc, PStr [stri]] in
+    let s = Str.value ~loc Nonrecursive
+        [ Vb.mk ~loc ~attrs (Pat.any ~loc ()) poly_exp ]
+    in
     [ bindings ; s ]
 
 
