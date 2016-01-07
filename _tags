@@ -54,6 +54,9 @@ true: annot, bin_annot
 <src/*.ml{,i,y}>: use_eliom_lang
 # OASIS_STOP
 
+# Work around ppx_core issues
+<*/*.{native,byte}>: predicate(ppx_driver)
+
 true: warn(+A-4-6-9-40-42-44-48)
 true: warn_error(+1..49)
 true: strict_sequence, safe_string, short_paths
