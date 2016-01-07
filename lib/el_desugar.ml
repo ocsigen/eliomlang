@@ -76,7 +76,10 @@ end
 *)
 let make_poly ~loc m =
   let l = Name.Map.bindings m in
-  let args = List.map (fun (e,_) -> ("", e)) l in
+  let args = List.map
+      (fun (_,v) -> ("", Ppx_core.Ast_builder.Default.evar ~loc v))
+      l
+  in
   let assert_false = [%expr assert false][@metaloc loc] in
   let rec aux = function
     | [] -> assert_false
@@ -124,7 +127,11 @@ let mapper = object (self)
       let frag_exp = self#expression `Client frag_exp in
       let frag_exp, m = collect_injections#expression frag_exp Name.Map.empty in
       let poly_exp = make_poly ~loc m in
-      let e = Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp in
+      let e = if Name.Map.is_empty m then
+          poly_exp
+        else
+          Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp
+      in
       let eliom_attr = Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp] in
       exp_add_attrs (eliom_attr :: attrs) e
 
@@ -133,10 +140,10 @@ let mapper = object (self)
       begin match context with
         | `Client ->
           let context = `Injection in
-          super#expression context inj
+          make_inj ~loc @@ super#expression context inj
         | `Fragment ->
           let context = `Escaped_value in
-          super#expression context inj
+          make_inj ~loc @@ super#expression context inj
         | `Server ->
           exp_error ~loc "The syntax ~%% ... is not allowed inside server code."
         | `Escaped_value | `Injection ->

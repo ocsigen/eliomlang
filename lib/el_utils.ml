@@ -102,6 +102,8 @@ module Name = struct
 
     let bindings {map} = M.bindings map
 
+    let is_empty {map} = M.is_empty map
+
   end
 
   let escaped_ident_fmt : _ format6 =
@@ -162,6 +164,8 @@ end
 
 let open_eliom_pervasives = [%stri open Eliom_pervasives ]
 
+let make_inj ~loc e =
+  [%expr ~% [%e e]][@metaloc loc]
 
 (** Collect all the injection expressions and substitute them by fresh
     variables. Returns a map from variable to injections.
@@ -175,7 +179,7 @@ let collect_injections = object
       let (s, m) = Name.add_injection inj acc in
       let loc = expr.pexp_loc in
       let e = Exp.ident ~loc @@ Location.mkloc (Longident.Lident s) loc in
-      e, m
+      make_inj ~loc e, m
     | _ ->
       super#expression expr acc
 end
