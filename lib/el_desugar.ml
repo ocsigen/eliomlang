@@ -1,5 +1,6 @@
 open Parsetree
 open Ast_helper
+open Ppx_core.Std
 
 module AM = Ast_mapper
 module AC = Ast_convenience
@@ -74,18 +75,19 @@ end
 
     The resulting expression should be of type [∀ 'a. 'a].
 *)
-let make_poly ~loc m =
+let make_poly ~loc ~id m =
   let l = Name.Map.bindings m in
-  let args = List.map
-      (fun (_,v) -> (Asttypes.Nolabel, Ppx_core.Ast_builder.Default.evar ~loc v))
-      l
-  in
   let assert_false = [%expr assert false][@metaloc loc] in
-  let rec aux = function
-    | [] -> assert_false
-    | _ :: t -> [%expr fun _ -> [%e aux t]][@metaloc loc]
-  in
-  Exp.apply ~loc (aux l) args
+  let id = Ast_builder.Default.eint64 ~loc id in
+  match l with
+  | [] -> assert_false
+  | _::_ -> begin
+      let arg =
+        etuple ~loc @@
+        List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
+      in
+      [%expr (fun _id _arg -> [%e assert_false]) [%e id] [%e arg] ][@metaloc loc]
+    end
 
 let mapper = object (self)
   inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
@@ -126,14 +128,12 @@ let mapper = object (self)
       when is_annotation txt ["client"] ->
       let frag_exp = self#expression `Client frag_exp in
       let frag_exp, m = collect_injections#expression frag_exp Name.Map.empty in
-      let poly_exp = make_poly ~loc m in
-      let e = if Name.Map.is_empty m then
-          poly_exp
-        else
-          Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp
-      in
       let eliom_attr = Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp] in
-      exp_add_attrs (eliom_attr :: attrs) e
+      let poly_exp = exp_add_attrs (eliom_attr :: attrs) @@ make_poly ~loc m in
+      if Name.Map.is_empty m then
+        poly_exp
+      else
+        Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp
 
     (* ~%( ... ) ] *)
     | [%expr ~% [%e? inj ]], _ ->

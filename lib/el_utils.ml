@@ -1,5 +1,6 @@
 open Parsetree
 open Ast_helper
+open Ppx_core.Std
 
 module AM = Ast_mapper
 module AC = Ast_convenience
@@ -39,15 +40,10 @@ let exp_error ?sub ~loc = error Exp.extension ?sub ~loc
 let str_error ?sub ~loc = error Str.extension ?sub ~loc
 let sig_error ?sub ~loc = error Sig.extension ?sub ~loc
 
-let format_args = function
-  | [] -> AC.unit ()
+let etuple ~loc = function
+  | [] ->  Ast_builder.Default.eunit ~loc
   | [e] -> e
-  | l -> Exp.tuple l
-
-let pat_args = function
-  | [] -> AC.punit ()
-  | [p] -> p
-  | l -> Pat.tuple l
+  | l -> Exp.tuple ~loc l
 
 let file_hash loc =
   Hashtbl.hash @@ loc.Location.loc_start.pos_fname
