@@ -8,12 +8,12 @@ Plugins:     META (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild
 
 AlphaFeatures: ocamlbuild_more_args
-OCamlVersion:     >= 4.02.3
+OCamlVersion:     >= 4.03.0
 
 Library "eliom_lang"
   FindlibName: eliom_lang
   Path: lib
-  Modules: Eliom_lang, El_desugar, El_client
+  Modules: Eliom_lang, El_desugar, El_server
   InternalModules: El_utils
   BuildDepends: compiler-libs, ppx_tools, ppx_tools.metaquot, ppx_core
 

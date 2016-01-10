@@ -75,22 +75,29 @@ end
 
     The resulting expression should be of type [∀ 'a. 'a].
 *)
-let make_poly ~loc ~id m =
+let make_poly ~loc ?id m =
   let l = Name.Map.bindings m in
   let assert_false = [%expr assert false][@metaloc loc] in
-  let id = Ast_builder.Default.eint64 ~loc id in
-  match l with
-  | [] -> assert_false
-  | _::_ -> begin
-      let arg =
-        etuple ~loc @@
-        List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
-      in
-      [%expr (fun _id _arg -> [%e assert_false]) [%e id] [%e arg] ][@metaloc loc]
-    end
+  let arg =
+    etuple ~loc @@
+    List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
+  in
+  match id with
+  | Some id ->
+    let id = Ast_builder.Default.eint64 ~loc id in
+    [%expr
+      (fun _id _arg -> [%e assert_false]) [%e id] [%e arg]
+    ][@metaloc loc]
+  | None ->
+    [%expr
+      (fun _arg -> [%e assert_false]) [%e arg]
+    ][@metaloc loc]
 
 let mapper = object (self)
   inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
+
+  val mutable fragment_map = Name.Map.empty
+  val mutable injection_counter = 0L
 
   method! expression context expr =
     let loc = expr.pexp_loc in
@@ -127,13 +134,17 @@ let mapper = object (self)
       `Server
       when is_annotation txt ["client"] ->
       let frag_exp = self#expression `Client frag_exp in
-      let frag_exp, m = collect_injections#expression frag_exp Name.Map.empty in
-      let eliom_attr = Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp] in
-      let poly_exp = exp_add_attrs (eliom_attr :: attrs) @@ make_poly ~loc m in
-      if Name.Map.is_empty m then
-        poly_exp
-      else
-        Exp.let_ ~loc Nonrecursive (value_binding_of_map m) poly_exp
+      let frag_exp, m = collect_escaped frag_exp in
+      let eliom_attr =
+        Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp]
+      in
+      let id, new_fragment_map = Name.add_fragment frag_exp fragment_map in
+      fragment_map <- new_fragment_map ;
+      let poly_exp =
+        exp_add_attrs (eliom_attr :: attrs) @@ make_poly ~loc ~id m
+      in
+      if Name.Map.is_empty m then poly_exp
+      else Exp.let_ ~loc Nonrecursive (Name.Map.value_bindings m) poly_exp
 
     (* ~%( ... ) ] *)
     | [%expr ~% [%e? inj ]], _ ->
@@ -167,9 +178,14 @@ let mapper = object (self)
   method private client_section stri =
     let loc = stri.pstr_loc in
     let stri = self#structure_item `Client stri in
-    let stri, m = collect_injections#structure_item stri Name.Map.empty in
-    let poly_exp = make_poly ~loc m in
-    let bindings = Str.value ~loc Nonrecursive (value_binding_of_map m) in
+    let stri, new_m, new_injection_counter =
+      collect_injection stri injection_counter
+    in
+    injection_counter <- new_injection_counter ;
+    let poly_exp = make_poly ~loc new_m in
+    let bindings =
+      Str.value ~loc Nonrecursive @@ Name.Map.value_bindings new_m
+    in
     let attrs = [Location.mkloc eliom_section_attr loc, PStr [stri]] in
     let s = Str.value ~loc Nonrecursive
         [ Vb.mk ~loc ~attrs (Pat.any ~loc ()) poly_exp ]

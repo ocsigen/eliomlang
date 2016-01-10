@@ -1,7 +1,5 @@
 open Typedtree
 module P = Parsetree
-open Ast_helper
-open Ppx_core.Std
 
 module U = Untypeast
 module AM = Ast_mapper
@@ -23,7 +21,7 @@ let get_client_fragment e =
 
 
 
-let close_server_section ~loc =
+let server_section ~loc =
   let e_hash = AC.str @@ string_of_int @@ file_hash loc in
   [%stri
     let () = Eliom_runtime.close_server_section [%e e_hash]
@@ -35,6 +33,12 @@ let fragment ~loc id arg =
       ~pos:[%e position loc ]
       [%e id]
       [%e arg]
+  ][@metaloc loc]
+
+let client_section ~loc arg =
+  let e_hash = AC.str @@ string_of_int @@ file_hash loc in
+  [%stri
+    let () = Eliom_runtime.close_client_section [%e e_hash] [%e arg]
   ][@metaloc loc]
 
 
@@ -56,6 +60,11 @@ let structure_item mapper stri =
   match get_client_section stri with
   | None -> [
       U.default_mapper.structure_item mapper stri  ;
-      close_server_section ~loc
+      server_section ~loc
     ]
-  | Some _stri -> []
+  | Some _stri ->
+    match stri.str_desc with
+    | Tstr_value (_,[{vb_expr=arg}]) ->
+      let arg = U.default_mapper.expr U.default_mapper arg in
+      [ client_section ~loc arg ]
+    | _ -> [str_error ~loc "Eliom ICE"]

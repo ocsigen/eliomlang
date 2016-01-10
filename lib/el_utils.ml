@@ -67,7 +67,7 @@ let rec get_attr s = function
   | [] -> None
 
 let is_annotation txt l =
-  List.exists (fun s -> txt = s || txt = "eliom."^s) l
+  List.exists (Ppx_core.Name.matches ~pattern:("eliom."^txt)) l
 
 (** Internal attributes *)
 let eliom_section_attr = "eliom.section"
@@ -84,8 +84,11 @@ module Name = struct
     end )
 
   module Map = struct
-    type t = { i : int64 ; map : string M.t }
+    type 'a t = { i : int64 ; map : 'a M.t }
     let empty = { i = 0L ; map = M.empty }
+    let seeded i = { i ; map = M.empty }
+
+    let bindings {map} = M.bindings map
 
     let add make expr {i; map} =
       if M.mem expr map
@@ -96,22 +99,29 @@ module Name = struct
         let i = Int64.(add one) i in
         s, {i ; map = M.add expr s map }
 
-    let bindings {map} = M.bindings map
-
     let is_empty {map} = M.is_empty map
+
+    let value_bindings {map} =
+      let f (e, s) =
+        let loc = e.pexp_loc in
+        Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
+      in
+      List.map f @@ M.bindings map
+
+    let union { i ; map } { map = m2 } = { i ; map = M.fold M.add map m2 }
 
   end
 
   let escaped_ident_fmt : _ format6 =
-    "_eliom_escaped_ident_%Ld"
+    "_eliom_escaped_%Ld"
 
   let fragment_ident_fmt : _ format6 =
     "_eliom_fragment_%Ld"
 
   let injected_ident_fmt : _ format6 =
-    "_eliom_injected_ident_%019d_%Ld"
+    "_eliom_injection_%019d_%Ld"
 
-  let add_escaped_value =
+  let add_escaped =
     let make _ i = Printf.sprintf escaped_ident_fmt i in
     Map.add make
 
@@ -120,24 +130,22 @@ module Name = struct
     Map.add make
 
   let add_fragment =
-    let make _ i = Printf.sprintf fragment_ident_fmt i in
+    let make _ i =  i in
     Map.add make
+
+  let make_injection = Printf.sprintf fragment_ident_fmt
 
 end
 
 (** Context convenience module. *)
 module Context = struct
 
-  let to_string = function
-    | `Client -> "client"
-    | `Shared -> "shared"
-    | `Server -> "server"
-
-  let of_string = function
-    | "server" | "server.start" -> `Server
-    | "shared" | "shared.start" -> `Shared
-    | "client" | "client.start" -> `Client
-    | _ -> invalid_arg "Eliom ppx: Not a context"
+  let of_string s =
+    let f pattern s = Ppx_core.Name.matches ~pattern s in
+    if f "eliom.server" s || f "eliom.server.start" s then `Server
+    else if f "eliom.shared" s || f "eliom.shared.start" s then `Shared
+    else if f "eliom.client" s || f "eliom.client.start" s then `Client
+    else invalid_arg "Eliom ppx: Not a context"
 
   type escape_inject = [
     | `Escaped_value
@@ -168,11 +176,11 @@ let make_inj ~loc e =
 
     Can be applied both to client section and fragments.
 *)
-let collect_injections = object
+let collect f = object
   inherit [_] Ppx_core.Ast_traverse.fold_map as super
   method! expression expr acc = match expr with
     | [%expr ~% [%e? inj ]] ->
-      let (s, m) = Name.add_injection inj acc in
+      let (s, m) = f inj acc in
       let loc = expr.pexp_loc in
       let e = Exp.ident ~loc @@ Location.mkloc (Longident.Lident s) loc in
       make_inj ~loc e, m
@@ -180,9 +188,10 @@ let collect_injections = object
       super#expression expr acc
 end
 
-let value_binding_of_map m =
-  let f (e, s) =
-    let loc = e.pexp_loc in
-    Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
-  in
-  List.map f @@ Name.Map.bindings m
+let collect_escaped e =
+  (collect Name.add_escaped)#expression e Name.Map.empty
+
+let collect_injection stri counter =
+  let new_map = Name.Map.seeded counter in
+  let stri, m = (collect Name.add_injection)#structure_item stri new_map in
+  stri, m, m.i
