@@ -45,6 +45,10 @@ let etuple ~loc = function
   | [e] -> e
   | l -> Exp.tuple ~loc l
 
+let make_sequence ~loc l =
+  let f e l = Exp.sequence ~loc:e.pexp_loc e l in
+  List.fold_right f l (Ast_builder.Default.eunit ~loc)
+
 let file_hash loc =
   Hashtbl.hash @@ loc.Location.loc_start.pos_fname
 

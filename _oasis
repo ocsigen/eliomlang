@@ -13,7 +13,7 @@ OCamlVersion:     >= 4.03.0
 Library "eliom_lang"
   FindlibName: eliom_lang
   Path: lib
-  Modules: Eliom_lang, El_desugar, El_server
+  Modules: Eliom_lang, El_desugar, El_server, El_client
   InternalModules: El_utils
   BuildDepends: compiler-libs.common, ppx_tools, ppx_tools.metaquot, ppx_core
 
@@ -27,6 +27,12 @@ Executable "server"
   Install: false
   Path: utils
   MainIs: server.ml
+  BuildDepends: eliom_lang
+
+Executable "client"
+  Install: false
+  Path: utils
+  MainIs: client.ml
   BuildDepends: eliom_lang
 
 # Executable "eliomc"
