@@ -68,3 +68,12 @@ let structure_item mapper stri =
       let arg = U.default_mapper.expr U.default_mapper arg in
       [ client_section ~loc arg ]
     | _ -> [str_error ~loc "Eliom ICE"]
+
+let structure mapper {str_items} =
+  flatmap (structure_item mapper) str_items
+
+let mapper =
+  { U.default_mapper with
+    structure ;
+    expr
+  }
