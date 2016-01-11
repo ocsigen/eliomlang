@@ -49,17 +49,22 @@ let file_hash loc =
   Hashtbl.hash @@ loc.Location.loc_start.pos_fname
 
 let lexing_position ~loc l =
-  [%expr
-    { Lexing.pos_fname = [%e AC.str l.Lexing.pos_fname];
-      Lexing.pos_lnum = [%e AC.int @@ l.Lexing.pos_lnum];
-      Lexing.pos_bol = [%e AC.int @@ l.Lexing.pos_bol];
-      Lexing.pos_cnum = [%e AC.int @@ l.Lexing.pos_cnum]; }
-  ] [@metaloc loc]
+  Exp.tuple ~loc [
+    AC.int @@ l.Lexing.pos_lnum;
+    AC.int @@ l.Lexing.pos_bol;
+    AC.int @@ l.Lexing.pos_cnum ;
+  ]
 
 let position loc =
   let start = loc.Location.loc_start in
-  let stop = loc.Location.loc_start in
-  Exp.tuple ~loc [ lexing_position ~loc start ; lexing_position ~loc stop ]
+  let stop = loc.Location.loc_end in
+  (* Hopefully, start and end positions are in the same file. *)
+  let file = AC.str start.Lexing.pos_fname in
+  [%expr
+    Eliom_runtime.pos [%e file]
+      [%e lexing_position ~loc start]
+      [%e lexing_position ~loc stop]
+  ][@metaloc loc]
 
 let rec get_attr s = function
   | ({Location.txt}, stri) :: _ when txt = s -> Some stri

@@ -1,4 +1,17 @@
 
+let pos pos_fname (lnum1, bol1, cnum1) (lnum2, bol2, cnum2) =
+  Lexing.(
+    { pos_fname ;
+      pos_lnum = lnum1 ;
+      pos_bol = bol1 ;
+      pos_cnum = cnum1 ;
+    },
+    { pos_fname;
+      pos_lnum = lnum2 ;
+      pos_bol = bol2 ;
+      pos_cnum = cnum2 ;
+    })
+
 let string_escape s =
   let l = String.length s in
   let b = Buffer.create (16 * 1024) in
