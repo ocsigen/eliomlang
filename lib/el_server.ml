@@ -1,5 +1,4 @@
 open Typedtree
-module P = Parsetree
 
 module U = Untypeast
 module AM = Ast_mapper
@@ -77,3 +76,6 @@ let mapper =
     structure ;
     expr
   }
+
+
+let structure = mapper.structure mapper

@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 786bfe922ad72583627a40a9f33a1ea9)
+# DO NOT EDIT (digest: 1a3f9d4cabe7a7865306bdd0224ab502)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -16,17 +16,23 @@ true: annot, bin_annot
 "_darcs": not_hygienic
 # Library eliom_lang
 "lib/eliom_lang.cmxs": use_eliom_lang
-<lib/*.ml{,i,y}>: package(compiler-libs)
+<lib/*.ml{,i,y}>: package(compiler-libs.common)
 <lib/*.ml{,i,y}>: package(ppx_core)
 <lib/*.ml{,i,y}>: package(ppx_tools)
 <lib/*.ml{,i,y}>: package(ppx_tools.metaquot)
 # Executable desugar
-"utils/desugar.byte": package(compiler-libs)
+"utils/desugar.byte": package(compiler-libs.common)
 "utils/desugar.byte": package(ppx_core)
 "utils/desugar.byte": package(ppx_tools)
 "utils/desugar.byte": package(ppx_tools.metaquot)
 "utils/desugar.byte": use_eliom_lang
-<utils/*.ml{,i,y}>: package(compiler-libs)
+# Executable server
+"utils/server.byte": package(compiler-libs.common)
+"utils/server.byte": package(ppx_core)
+"utils/server.byte": package(ppx_tools)
+"utils/server.byte": package(ppx_tools.metaquot)
+"utils/server.byte": use_eliom_lang
+<utils/*.ml{,i,y}>: package(compiler-libs.common)
 <utils/*.ml{,i,y}>: package(ppx_core)
 <utils/*.ml{,i,y}>: package(ppx_tools)
 <utils/*.ml{,i,y}>: package(ppx_tools.metaquot)

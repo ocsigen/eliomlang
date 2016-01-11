@@ -234,7 +234,7 @@ let mapper = object (self)
       | _ ->
         (c, self#dispatch_str c [pstr])
     in
-    open_eliom_pervasives :: fold_accum f structs context
+    fold_accum f structs context
 
   method! signature context sigs =
     let f c psig =

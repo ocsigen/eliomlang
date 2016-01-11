@@ -15,12 +15,18 @@ Library "eliom_lang"
   Path: lib
   Modules: Eliom_lang, El_desugar, El_server
   InternalModules: El_utils
-  BuildDepends: compiler-libs, ppx_tools, ppx_tools.metaquot, ppx_core
+  BuildDepends: compiler-libs.common, ppx_tools, ppx_tools.metaquot, ppx_core
 
 Executable "desugar"
   Install: false
   Path: utils
   MainIs: desugar.ml
+  BuildDepends: eliom_lang
+
+Executable "server"
+  Install: false
+  Path: utils
+  MainIs: server.ml
   BuildDepends: eliom_lang
 
 # Executable "eliomc"
