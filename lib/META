@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 70550c28ce152a6a6d4d4a1c4ae0571a)
+# DO NOT EDIT (digest: 3346893f75d452d2bcf963d633194a89)
 version = "0.1.0"
 description = "Eliom-lang"
 requires = "compiler-libs.common ppx_tools ppx_tools.metaquot ppx_core"
@@ -8,5 +8,33 @@ archive(byte, plugin) = "eliom_lang.cma"
 archive(native) = "eliom_lang.cmxa"
 archive(native, plugin) = "eliom_lang.cmxs"
 exists_if = "eliom_lang.cma"
+package "runtime" (
+ version = "0.1.0"
+ description = "Eliom-lang"
+ archive(byte) = "runtime.cma"
+ archive(byte, plugin) = "runtime.cma"
+ archive(native) = "runtime.cmxa"
+ archive(native, plugin) = "runtime.cmxs"
+ exists_if = "runtime.cma"
+ package "server" (
+  version = "0.1.0"
+  description = "Eliom-lang"
+  archive(byte) = "eliom_runtime_server.cma"
+  archive(byte, plugin) = "eliom_runtime_server.cma"
+  archive(native) = "eliom_runtime_server.cmxa"
+  archive(native, plugin) = "eliom_runtime_server.cmxs"
+  exists_if = "eliom_runtime_server.cma"
+ )
+ 
+ package "client" (
+  version = "0.1.0"
+  description = "Eliom-lang"
+  archive(byte) = "eliom_runtime_client.cma"
+  archive(byte, plugin) = "eliom_runtime_client.cma"
+  archive(native) = "eliom_runtime_client.cmxa"
+  archive(native, plugin) = "eliom_runtime_client.cmxs"
+  exists_if = "eliom_runtime_client.cma"
+ )
+)
 # OASIS_STOP
 

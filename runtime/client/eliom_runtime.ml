@@ -1,0 +1,2 @@
+
+type +'a fragment = 'a

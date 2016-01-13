@@ -7,7 +7,7 @@ License:     GPL
 Plugins:     META (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild
 
-AlphaFeatures: ocamlbuild_more_args
+AlphaFeatures: ocamlbuild_more_args, pure_interface
 OCamlVersion:     >= 4.03.0
 
 Library "eliom_lang"
@@ -16,6 +16,8 @@ Library "eliom_lang"
   Modules: Eliom_lang, El_desugar, El_server, El_client
   InternalModules: El_utils
   BuildDepends: compiler-libs.common, ppx_tools, ppx_tools.metaquot, ppx_core
+
+## Utils
 
 Executable "desugar"
   Install: false
@@ -34,6 +36,28 @@ Executable "client"
   Path: utils
   MainIs: client.ml
   BuildDepends: eliom_lang
+
+
+## Runtime
+
+Library "runtime"
+  FindlibParent: eliom_lang
+  FindlibName: runtime
+  Path: runtime
+
+Library "eliom_runtime_server"
+  FindlibParent: runtime
+  FindlibName: server
+  Path: runtime/server
+  Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
+  InternalModules:
+
+Library "eliom_runtime_client"
+  FindlibParent: runtime
+  FindlibName: client
+  Path: runtime/client
+  Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
+  InternalModules:
 
 # Executable "eliomc"
 #   Path: src
