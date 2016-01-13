@@ -13,7 +13,7 @@ OCamlVersion:     >= 4.03.0
 Library "eliom_lang"
   FindlibName: eliom_lang
   Path: lib
-  Modules: Eliom_lang, El_desugar, El_server, El_client
+  Modules: El_desugar, El_server, El_client
   InternalModules: El_utils
   BuildDepends: compiler-libs.common, ppx_tools, ppx_tools.metaquot, ppx_core
 
