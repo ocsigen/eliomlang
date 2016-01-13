@@ -11,6 +11,6 @@ let%client z = ~%(x+1) + ~%x
 
 (*
 Local Variables:
-compile-command: "ocamlfind ppx_tools/rewriter -ppx ../desugar.byte -impl test.eliom"
+compile-command: " ocamlc -dsource -ppx ../client.byte -impl test.eliom ; rm a.out *.cm*"
 End:
 *)
