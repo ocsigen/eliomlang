@@ -1,7 +1,7 @@
 # OASIS_START
 # DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
 
-SETUP = ocaml -w -3 setup.ml
+SETUP = ocaml setup.ml
 
 build: setup.data
 	$(SETUP) -build $(BUILDFLAGS)
