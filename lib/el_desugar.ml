@@ -78,10 +78,8 @@ let annotate_fragment ?typ exp =
   in
   Exp.constraint_ ~loc exp typ
 
-(** Given a name map, create an expression of the form
-    ((fun _ _ _ -> assert false) e_1 .. e_n)
-
-    The resulting expression should be of type [∀ 'a. 'a].
+(** Given a name map and a type, create an expression of the form
+    ((fun _ _ _ -> (assert false : ty) e_1 .. e_n)
 *)
 let make_poly ~loc ?id ?typ m =
   let assert_false = [%expr assert false][@metaloc loc] in
