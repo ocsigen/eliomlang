@@ -1,4 +1,5 @@
 open Typedtree
+open Ast_helper
 
 module U = Untypeast
 module AM = Ast_mapper
@@ -18,6 +19,16 @@ let get_client_fragment e =
   | Some _ -> Some (exp_error ~loc:e.exp_loc "Eliom ICE")
   | _ -> None
 
+let get_id e = match e.exp_desc with
+  | Texp_ident (_, {Location.txt = Lident txt; loc}, _) -> {Location.txt; loc}
+  | _ -> Location.raise_errorf ~loc:e.exp_loc "Eliom ICE: An identifier was expected."
+
+let tuple_id_to_list e = match e.exp_desc with
+  | Texp_construct ({txt=Lident "()"},_,[]) -> []
+  | Texp_tuple l -> List.map get_id l
+  | Texp_ident (_, {txt = Lident txt; loc}, _) -> [{Location.txt; loc}]
+  | _ -> Location.raise_errorf ~loc:e.exp_loc
+      "Eliom ICE: A tuple of identifiers was expected."
 
 
 let server_section ~loc =
@@ -35,9 +46,14 @@ let fragment ~loc id arg =
   ][@metaloc loc]
 
 let client_section ~loc arg =
+  let f {Location. txt;loc} e =
+    let id = Exp.ident ~loc {txt = Lident txt; loc} in
+    [%expr Eliom_runtime.Poly.make [%e id] :: [%e e]][@metaloc loc]
+  in
+  let l = List.fold_right f (tuple_id_to_list arg) [%expr []][@metaloc loc] in
   let e_hash = AC.str @@ string_of_int @@ file_hash loc in
   [%stri
-    let () = Eliom_runtime.close_client_section [%e e_hash] [%e arg]
+    let () = Eliom_runtime.close_client_section [%e e_hash] [%e l]
   ][@metaloc loc]
 
 
@@ -64,7 +80,6 @@ let structure_item mapper stri =
   | Some _stri ->
     match stri.str_desc with
     | Tstr_value (_,[{vb_expr={exp_desc=Texp_apply (_, [(_,Some arg)])}}]) ->
-      let arg = U.default_mapper.expr U.default_mapper arg in
       [ client_section ~loc arg ]
     | _ -> [str_error ~loc "Eliom ICE"]
 

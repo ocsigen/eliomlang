@@ -70,14 +70,23 @@ module Shared = struct
 
 end
 
+let annotate_fragment ?typ exp =
+  let loc = exp.pexp_loc in
+  let typ = match typ with
+    | None -> [%type: _ Eliom_runtime.fragment][@metaloc loc]
+    | Some typ -> [%type: [%t typ] Eliom_runtime.fragment][@metaloc loc]
+  in
+  Exp.constraint_ ~loc exp typ
+
 (** Given a name map, create an expression of the form
     ((fun _ _ _ -> assert false) e_1 .. e_n)
 
     The resulting expression should be of type [∀ 'a. 'a].
 *)
-let make_poly ~loc ?id m =
+let make_poly ~loc ?id ?typ m =
   let l = Name.Map.bindings m in
   let assert_false = [%expr assert false][@metaloc loc] in
+  let exp = annotate_fragment ?typ assert_false in
   let arg =
     etuple ~loc @@
     List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
@@ -86,11 +95,11 @@ let make_poly ~loc ?id m =
   | Some id ->
     let id = Ast_builder.Default.eint64 ~loc id in
     [%expr
-      (fun _id _arg -> [%e assert_false]) [%e id] [%e arg]
+      (fun _id _arg -> [%e exp]) [%e id] [%e arg]
     ][@metaloc loc]
   | None ->
     [%expr
-      (fun _arg -> [%e assert_false]) [%e arg]
+      (fun _arg -> [%e exp]) [%e arg]
     ][@metaloc loc]
 
 let mapper = object (self)
@@ -134,6 +143,10 @@ let mapper = object (self)
       `Server
       when is_annotation txt ["client"] ->
       let frag_exp = self#expression `Client frag_exp in
+      let frag_exp, typ = match frag_exp.pexp_desc with
+        | Pexp_constraint (e, typ) -> e, Some typ
+        | _ -> frag_exp, None
+      in
       let frag_exp, m = collect_escaped frag_exp in
       let eliom_attr =
         Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp]
@@ -141,7 +154,7 @@ let mapper = object (self)
       let id, new_fragment_map = Name.add_fragment frag_exp fragment_map in
       fragment_map <- new_fragment_map ;
       let poly_exp =
-        exp_add_attrs (eliom_attr :: attrs) @@ make_poly ~loc ~id m
+        exp_add_attrs (eliom_attr :: attrs) @@ make_poly ~loc ~id ?typ m
       in
       if Name.Map.is_empty m then poly_exp
       else Exp.let_ ~loc Nonrecursive (Name.Map.value_bindings m) poly_exp

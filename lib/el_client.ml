@@ -24,6 +24,13 @@ let get_id e = match e.exp_desc with
   | Texp_ident (_, {Location.txt = Lident txt; loc}, _) -> {Location.txt; loc}
   | _ -> Location.raise_errorf ~loc:e.exp_loc "Eliom ICE: An identifier was expected."
 
+let tuple_id_to_list e = match e.exp_desc with
+  | Texp_construct ({txt=Lident "()"},_,[]) -> []
+  | Texp_tuple l -> List.map get_id l
+  | Texp_ident (_, {txt = Lident txt; loc}, _) -> [{Location.txt; loc}]
+  | _ -> Location.raise_errorf ~loc:e.exp_loc
+      "Eliom ICE: A tuple of identifiers was expected."
+
 (** Server sections *)
 
 module H = Hashtbl.Make(struct include Int64 let hash = Hashtbl.hash end)
@@ -40,13 +47,8 @@ let get_fragments str =
           in
           match e.exp_desc with
           | Texp_apply (_, [(_, Some {exp_desc=Texp_constant (Const_int64 id)});
-                            (_, Some {exp_desc=tuple})]) ->
-            let args = match tuple with
-              | Texp_construct ({txt=Lident "()"},_,[]) -> []
-              | Texp_tuple l -> List.map get_id l
-              | Texp_ident (_, {txt = Lident txt; loc}, _) -> [{Location.txt; loc}]
-              | _ -> error ()
-            in
+                            (_, Some args)]) ->
+            let args = tuple_id_to_list args in
             H.add h id (args, frag)
           | _ -> error ()
     end)
