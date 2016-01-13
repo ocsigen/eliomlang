@@ -84,13 +84,9 @@ let annotate_fragment ?typ exp =
     The resulting expression should be of type [∀ 'a. 'a].
 *)
 let make_poly ~loc ?id ?typ m =
-  let l = Name.Map.bindings m in
   let assert_false = [%expr assert false][@metaloc loc] in
   let exp = annotate_fragment ?typ assert_false in
-  let arg =
-    etuple ~loc @@
-    List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
-  in
+  let arg = Name.Map.tuple ~loc m in
   match id with
   | Some id ->
     let id = Ast_builder.Default.eint64 ~loc id in
@@ -195,13 +191,13 @@ let mapper = object (self)
       collect_injection stri injection_counter
     in
     injection_counter <- new_injection_counter ;
-    let poly_exp = make_poly ~loc new_m in
+    let exp = Name.Map.tuple ~loc new_m in
     let bindings =
       Str.value ~loc Nonrecursive @@ Name.Map.value_bindings new_m
     in
     let attrs = [Location.mkloc eliom_section_attr loc, PStr [stri]] in
     let s = Str.value ~loc Nonrecursive
-        [ Vb.mk ~loc ~attrs (Pat.any ~loc ()) poly_exp ]
+        [ Vb.mk ~loc ~attrs (Pat.any ~loc ()) exp ]
     in
     [ bindings ; s ]
 

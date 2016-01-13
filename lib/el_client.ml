@@ -118,8 +118,8 @@ let structure_item _mapper stri =
   | Some client_stri ->
     match client_stri, stri.str_desc with
     | PStr [client_stri],
-      Tstr_value (_,[{vb_expr={exp_desc=Texp_apply (_, [(_,Some _arg)])}}]) ->
-      [ client_section ~loc  ;
+      Tstr_value (_,[{vb_expr=_}]) ->
+      [ client_section ~loc ;
         client_stri ;
       ]
     | _ -> [str_error ~loc "Eliom ICE"]

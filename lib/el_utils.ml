@@ -117,6 +117,10 @@ module Name = struct
       in
       List.map f @@ M.bindings map
 
+    let tuple ~loc {map} =
+      let l = M.bindings map in
+      etuple ~loc @@ List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
+
     let union { i ; map } { map = m2 } = { i ; map = M.fold M.add map m2 }
 
   end

@@ -79,9 +79,9 @@ let structure_item mapper stri =
     ]
   | Some _stri ->
     match stri.str_desc with
-    | Tstr_value (_,[{vb_expr={exp_desc=Texp_apply (_, [(_,Some arg)])}}]) ->
-      [ client_section ~loc arg ]
-    | _ -> [str_error ~loc "Eliom ICE"]
+    | Tstr_value (_,[{vb_expr}]) ->
+      [ client_section ~loc vb_expr ]
+    | _ -> [str_error ~loc "Eliom ICE: Malformed client section."]
 
 let structure mapper {str_items} =
   flatmap (structure_item mapper) str_items
