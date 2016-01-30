@@ -50,14 +50,14 @@ Library "eliom_runtime_server"
   FindlibName: server
   Path: runtime/server
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
-  InternalModules:
+  InternalModules: Eliom_serial
 
 Library "eliom_runtime_client"
   FindlibParent: runtime
   FindlibName: client
   Path: runtime/client
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
-  InternalModules:
+  InternalModules: Eliom_serial
 
 # Executable "eliomc"
 #   Path: src

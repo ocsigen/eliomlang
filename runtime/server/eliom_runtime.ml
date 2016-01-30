@@ -1,6 +1,4 @@
 
-type pos = Lexing.position * Lexing.position
-
 let pos pos_fname (lnum1, bol1, cnum1) (lnum2, bol2, cnum2) =
   Lexing.(
     { pos_fname ;
@@ -51,7 +49,7 @@ let string_escape s =
 
 module Poly = struct
 
-  type t
+  type t = Eliom_serial.poly
   let make x : t = Obj.magic x
 
   let marshall (poly : t) =
@@ -62,97 +60,131 @@ end
 
 type 'a fragment = 'a Eliom_fragment.t
 
-type client_value_datum = {
-  closure_id : int64;
-  instance_id : int64;
-  loc: pos option;
-  args : Poly.t;
-  value : Poly.t;
-}
-
-(* type 'injection_value injection_datum = { *)
-(*   injection_id : string; *)
-(*   injection_value : 'injection_value; *)
-(*   injection_loc : pos option; *)
-(*   injection_ident : string option; *)
-(* } *)
-
-(* type request_data = client_value_datum list *)
-
+module StringTbl = Hashtbl.Make(struct
+    include String
+    let hash = Hashtbl.hash
+  end)
 
 module Global_data = struct
 
-  module Tbl = Hashtbl.Make(struct
-      include String
-      let hash = Hashtbl.hash
-    end)
-
   type data = {
-    server : (client_value_datum list) Queue.t;
-    client : (Poly.t list) Queue.t;
+    mutable server : Eliom_serial.fragment array list;
+    mutable client : Eliom_serial.injection array list;
   }
 
-  let tbl = Tbl.create 17
+  let tbl = StringTbl.create 17
 
   let get id =
-    if Tbl.mem tbl id then
-      Tbl.find tbl id
+    if StringTbl.mem tbl id then
+      StringTbl.find tbl id
     else
       let data = {
-        server = Queue.create ();
-        client = Queue.create ()
+        server = [];
+        client = [];
       } in
-      Tbl.add tbl id data ;
+      StringTbl.add tbl id data ;
       data
 
+  let add_client d x =
+    d.client <- x :: d.client
+
+  let add_server d x =
+    d.server <- x :: d.server
+
+
+  let to_serial_data {client ; server} =
+    {Eliom_serial.
+      server = Array.of_list (List.rev server) ;
+      client = Array.of_list (List.rev client) ;
+    }
+
+  let serial () : Eliom_serial.global_data =
+    let r = ref 0 in
+    let empty_data = {Eliom_serial. server = [||] ; client = [||] } in
+    let a = Array.make (StringTbl.length tbl) ("", empty_data) in
+    let f k v = a.(!r) <- (k, to_serial_data v) ; incr r in
+    StringTbl.iter f tbl ;
+    a
+
+
+
 end
+
+module Request_data = struct
+
+  type t = Eliom_serial.fragment list
+
+  exception Hook_alread_set
+  exception Hook_not_set
+
+  type hook = {
+    get : unit -> t ;
+    add : Eliom_serial.fragment -> unit ;
+  }
+  let hook : hook option ref = ref None
+
+  let set_functions get add =
+    match !hook with
+    | None -> hook := Some { get ; add }
+    | Some _ -> raise Hook_alread_set
+
+  let get_functions () =
+    match !hook with
+    | None -> raise Hook_not_set
+    | Some f -> f
+
+  let get () = (get_functions()).get ()
+  let add x = (get_functions()).add x
+
+  let serial () : Eliom_serial.request_data =
+    Array.of_list @@ List.rev @@ get ()
+
+end
+
+
 
 let current_server_section_data = ref []
 
 let close_server_section compilation_unit_id =
-  let server_queue =
-    (Global_data.get compilation_unit_id).server
-  in
-  Queue.push (List.rev !current_server_section_data) server_queue;
+  let data = Global_data.get compilation_unit_id in
+  Global_data.add_server data @@
+  Array.of_list @@ List.rev !current_server_section_data;
   current_server_section_data := []
 
 let close_client_section compilation_unit_id injection_data =
-  let client_queue =
-    (Global_data.get compilation_unit_id).client
+  let data = Global_data.get compilation_unit_id in
+  let injection_datum (id, value, loc, ident) =
+    {Eliom_serial. id; value ; dbg = Some (loc, ident) }
   in
-  Queue.push injection_data client_queue
-  (* let injection_datum (injection_id, injection_value, loc, ident) = *)
-  (*   { injection_id; injection_value ; injection_loc = Some loc; injection_ident = ident } *)
-  (* in *)
-  (* Queue.push (List.map injection_datum injection_data) *)
-  (*   client_sections_data *)
-
-
-let fresh_ix () =
-  Int64.of_int (Oo.id (object end))
+  let injection_data = Array.of_list injection_data in
+  Global_data.add_client data @@
+  Array.map injection_datum injection_data
 
 let is_global = ref false
 let set_global b = is_global := b
 
-(* let register_client_value_data ?loc ~closure_id ~instance_id ~args ~value () = *)
-(*   let client_value_datum = { closure_id; instance_id; args; loc; value } in *)
-(*   if !is_global then *)
-(*     if Eliom_common.get_sp_option () = None then *)
-(*       current_server_section_data := *)
-(*         client_value_datum :: !current_server_section_data *)
-(*     else *)
-(*       raise (Client_value.Creation_invalid_context closure_id) *)
-(*   else *)
-(*     Eliom_reference.Volatile.modify request_data *)
-(*       (fun sofar -> client_value_datum :: sofar) *)
-
-let fragment ~pos:_ closure_id args =
-  let instance_id = fresh_ix () in
-  let v =
-    Eliom_fragment.create ~closure_id ~instance_id
+let register_fragment ~closure_id ~args ~value =
+  let fragment_datum =
+    Eliom_fragment.serial ~closure_id ~args value
   in
-  ignore (v,args)
-  (* register_client_value_data *)
-  (*   ?loc:pos ~closure_id ~instance_id *)
-  (*   ~args:(Poly.make args) ~value:(Poly.make v) (); *)
-  (* v *)
+  if !is_global then
+    (* We do not check if a request is not on going. *)
+    current_server_section_data :=
+      fragment_datum :: !current_server_section_data
+  else
+    Request_data.add fragment_datum
+
+let last_id = ref 0
+
+let fragment ?pos closure_id args =
+  let id =
+    if !is_global then begin
+      incr last_id;
+      !last_id
+    end else
+      0
+  in
+  let args = Poly.make args in
+  let value = Eliom_fragment.create ?loc:pos ~id in
+  register_fragment ~closure_id ~args ~value;
+  value
