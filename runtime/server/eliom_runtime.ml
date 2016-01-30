@@ -160,6 +160,7 @@ let close_client_section compilation_unit_id injection_data =
   Global_data.add_client data @@
   Array.map injection_datum injection_data
 
+
 let is_global = ref false
 let set_global b = is_global := b
 
