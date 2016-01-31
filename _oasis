@@ -58,6 +58,7 @@ Library "eliom_runtime_client"
   Path: runtime/client
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
+  BuildDepends: js_of_ocaml
 
 # Executable "eliomc"
 #   Path: src
