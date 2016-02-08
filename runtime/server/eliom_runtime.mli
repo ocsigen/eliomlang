@@ -13,7 +13,7 @@ end
 
 module Global_data : sig
 
-  val serial : unit -> Eliom_serial.global_data
+  val serial : debug:bool -> Eliom_serial.global_data
 
 end
 
@@ -69,5 +69,5 @@ val close_server_section : string -> unit
     subproject="client"|Eliom_client.Syntax_helpers.open_client_section>>.  *)
 val close_client_section :
   string ->
-  (int * Poly.t * Eliom_serial.pos * string option) list ->
+  (int * Poly.t * Eliom_serial.pos) list ->
   unit

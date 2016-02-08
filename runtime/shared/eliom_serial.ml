@@ -12,6 +12,8 @@ module Fragment_server_repr = struct
   }
   type 'a t = u
 
+  let unwrap_id = 7
+
   let create ?loc ~id ~unwrapper = { id; loc; unwrapper }
   let instance_id cv = cv.id
   let loc cv = cv.loc
@@ -26,7 +28,7 @@ type fragment = {
 }
 
 type injection = {
-  dbg : (pos * string option) option;
+  mutable dbg : pos option;
   id : int;
   value : poly;
 }
@@ -38,4 +40,11 @@ type compilation_unit_global_data = {
 
 type global_data = (string * compilation_unit_global_data) array
 
+let global_data_unwrap_id = 8
+
 type request_data = fragment array
+
+type js_data = {
+  global: global_data option;
+  request: request_data;
+}

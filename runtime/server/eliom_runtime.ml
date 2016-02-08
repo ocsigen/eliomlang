@@ -92,17 +92,31 @@ module Global_data = struct
     d.server <- x :: d.server
 
 
-  let to_serial_data {client ; server} =
+  let to_serial_data ~debug {client ; server} =
+    let clear_server_loc x =
+      (if not debug then
+         let open Eliom_serial in
+         let f (x : fragment) = Fragment_server_repr.clear_loc x.value in
+         List.iter (Array.iter f) x) ;
+      x
+    in
+    let clear_client_loc x =
+      (if not debug then
+         let open Eliom_serial in
+         let f x = x.dbg <- None in
+         List.iter (Array.iter f) x) ;
+      x
+    in
     {Eliom_serial.
-      server = Array.of_list (List.rev server) ;
-      client = Array.of_list (List.rev client) ;
+      server = Array.of_list (clear_server_loc @@ List.rev server) ;
+      client = Array.of_list (clear_client_loc @@ List.rev client) ;
     }
 
-  let serial () : Eliom_serial.global_data =
+  let serial ~debug : Eliom_serial.global_data =
     let r = ref 0 in
     let empty_data = {Eliom_serial. server = [||] ; client = [||] } in
     let a = Array.make (StringTbl.length tbl) ("", empty_data) in
-    let f k v = a.(!r) <- (k, to_serial_data v) ; incr r in
+    let f k v = a.(!r) <- (k, to_serial_data ~debug v) ; incr r in
     StringTbl.iter f tbl ;
     a
 
@@ -141,8 +155,6 @@ module Request_data = struct
 
 end
 
-
-
 let current_server_section_data = ref []
 
 let close_server_section compilation_unit_id =
@@ -153,8 +165,8 @@ let close_server_section compilation_unit_id =
 
 let close_client_section compilation_unit_id injection_data =
   let data = Global_data.get compilation_unit_id in
-  let injection_datum (id, value, loc, ident) =
-    {Eliom_serial. id; value ; dbg = Some (loc, ident) }
+  let injection_datum (id, value, loc) =
+    {Eliom_serial. id; value ; dbg = Some loc }
   in
   let injection_data = Array.of_list injection_data in
   Global_data.add_client data @@
