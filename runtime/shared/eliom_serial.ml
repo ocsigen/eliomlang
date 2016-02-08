@@ -44,7 +44,9 @@ let global_data_unwrap_id = 8
 
 type request_data = fragment array
 
-type js_data = {
+type eliom_data = {
   global: global_data option;
   request: request_data;
 }
+
+let eliom_data_id = "_eliom_data"

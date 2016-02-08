@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 3f2894508c511482265349cf7460be6b)
+# DO NOT EDIT (digest: f96e392471b835e8d065cafc605f0757)
 version = "0.1.0"
 description = "Eliom-lang"
 requires = "compiler-libs.common ppx_tools ppx_tools.metaquot ppx_core"
@@ -19,6 +19,7 @@ package "runtime" (
  package "server" (
   version = "0.1.0"
   description = "Eliom-lang"
+  requires = "re"
   archive(byte) = "eliom_runtime_server.cma"
   archive(byte, plugin) = "eliom_runtime_server.cma"
   archive(native) = "eliom_runtime_server.cmxa"

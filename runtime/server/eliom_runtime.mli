@@ -11,12 +11,6 @@ module Poly : sig
   val marshall : t -> string
 end
 
-module Global_data : sig
-
-  val serial : debug:bool -> Eliom_serial.global_data
-
-end
-
 module Request_data : sig
 
   type t = Eliom_serial.fragment list
@@ -26,10 +20,9 @@ module Request_data : sig
 
   val set_functions : (unit -> t) -> (Eliom_serial.fragment -> unit) -> unit
 
-  val serial : unit -> Eliom_serial.request_data
-
 end
 
+val eliom_script : debug:bool -> string
 
 type +'a fragment = 'a Eliom_fragment.t
 

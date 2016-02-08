@@ -148,7 +148,10 @@ module Request_data = struct
     match !eliom_data with
     | Some data -> data
     | None ->
-      let eliom_request_data = Js.Unsafe.get Js.Unsafe.global (Js.string "__eliom_request_data") in
+      let eliom_request_data =
+        Js.Unsafe.get Js.Unsafe.global @@
+        Js.string Eliom_serial.eliom_data_id
+      in
       Js.Optdef.case (Js.def eliom_request_data)
         (fun () -> eliom_data := Some default_request_data;
           default_request_data)

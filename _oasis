@@ -51,6 +51,7 @@ Library "eliom_runtime_server"
   Path: runtime/server
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
+  BuildDepends: re
 
 Library "eliom_runtime_client"
   FindlibParent: runtime

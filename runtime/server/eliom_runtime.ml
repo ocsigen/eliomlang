@@ -97,19 +97,19 @@ module Global_data = struct
       (if not debug then
          let open Eliom_serial in
          let f (x : fragment) = Fragment_server_repr.clear_loc x.value in
-         List.iter (Array.iter f) x) ;
+         Array.iter (Array.iter f) x) ;
       x
     in
     let clear_client_loc x =
       (if not debug then
          let open Eliom_serial in
          let f x = x.dbg <- None in
-         List.iter (Array.iter f) x) ;
+         Array.iter (Array.iter f) x) ;
       x
     in
     {Eliom_serial.
-      server = Array.of_list (clear_server_loc @@ List.rev server) ;
-      client = Array.of_list (clear_client_loc @@ List.rev client) ;
+      server = clear_server_loc @@ Array.of_list (List.rev server) ;
+      client = clear_client_loc @@ Array.of_list (List.rev client) ;
     }
 
   let serial ~debug : Eliom_serial.global_data =
@@ -150,10 +150,39 @@ module Request_data = struct
   let get () = (get_functions()).get ()
   let add x = (get_functions()).add x
 
-  let serial () : Eliom_serial.request_data =
-    Array.of_list @@ List.rev @@ get ()
+  let serial ~debug : Eliom_serial.request_data =
+    let clear_client_loc x =
+      (if not debug then
+         let open Eliom_serial in
+         let f (x : fragment) = Fragment_server_repr.clear_loc x.value in
+         Array.iter f x) ;
+      x
+    in
+    clear_client_loc @@ Array.of_list @@ List.rev @@ get ()
 
 end
+
+
+let closing_cdata = Re.(compile @@ str "]]>")
+let escape_cdata_script s =
+  (* For security reasons, we do not allow "]]>" inside CDATA
+     (as this string is to be considered as the end of the cdata)
+  *)
+  Printf.sprintf
+    {|\n//<![CDATA[\n%s\n//]]>\n|}
+    (Re.replace_string ~all:true closing_cdata ~by:"" s)
+
+let eliom_script ~debug =
+  let global = Some (Global_data.serial ~debug) in
+  let request = Request_data.serial ~debug in
+  let data = {Eliom_serial. global ; request } in
+  let script =
+    Printf.sprintf
+      "%s = \'%s\';"
+      Eliom_serial.eliom_data_id
+      (string_escape (Marshal.to_string data []))
+  in
+  escape_cdata_script script
 
 let current_server_section_data = ref []
 
