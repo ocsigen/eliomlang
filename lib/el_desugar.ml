@@ -87,7 +87,7 @@ let make_poly ~loc ?id ?typ m =
   let arg = Name.Map.tuple ~loc m in
   match id with
   | Some id ->
-    let id = Ast_builder.Default.eint64 ~loc id in
+    let id = Ast_builder.Default.estring ~loc id in
     [%expr
       (fun _id _arg -> [%e exp]) [%e id] [%e arg]
     ][@metaloc loc]
@@ -100,7 +100,7 @@ let mapper = object (self)
   inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
 
   val mutable fragment_map = Name.Map.empty
-  val mutable injection_counter = 0L
+  val mutable injection_counter = 0
 
   method! expression context expr =
     let loc = expr.pexp_loc in
@@ -189,7 +189,7 @@ let mapper = object (self)
       collect_injection stri injection_counter
     in
     injection_counter <- new_injection_counter ;
-    let exp = Name.Map.tuple ~loc new_m in
+    let exp = Name.Map.kv ~loc new_m in
     let bindings =
       Str.value ~loc Nonrecursive @@ Name.Map.value_bindings new_m
     in

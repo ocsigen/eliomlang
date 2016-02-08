@@ -33,7 +33,7 @@ let tuple_id_to_list e = match e.exp_desc with
 
 (** Server sections *)
 
-module H = Hashtbl.Make(struct include Int64 let hash = Hashtbl.hash end)
+module H = Hashtbl.Make(struct include String let hash = Hashtbl.hash end)
 let get_fragments str =
   let h = H.create 17 in
   let module Iter = TypedtreeIter.MakeIterator(struct
@@ -46,7 +46,7 @@ let get_fragments str =
               "Eliom ICE: This fragment annotation is malformed."
           in
           match e.exp_desc with
-          | Texp_apply (_, [(_, Some {exp_desc=Texp_constant (Const_int64 id)});
+          | Texp_apply (_, [(_, Some {exp_desc=Texp_constant (Const_string (id,_))});
                             (_, Some args)]) ->
             let args = tuple_id_to_list args in
             H.add h id (args, frag)
@@ -69,10 +69,10 @@ end
 
 let register_client_closure ~id args e =
   let loc = e.Parsetree.pexp_loc in
-  let id = Ast_builder.Default.eint64 ~loc id in
+  let id = Ast_builder.Default.estring ~loc id in
 
   let f (lid : _ Location.loc) = Pat.var ~loc:lid.loc lid in
-  let args = Pat.tuple ~loc (List.map f args) in
+  let args = ptuple ~loc (List.map f args) in
   let e = escaped_values#expression e in
   [%expr
     Eliom_runtime.register_client_closure [%e id]
@@ -92,7 +92,7 @@ let client_closures ~loc str =
   | l -> [%str let () = [%e make_sequence ~loc l ]][@metaloc loc]
 
 let server_section ~loc =
-  let e_hash = AC.str @@ string_of_int @@ file_hash loc in
+  let e_hash = AC.str @@ file_hash loc in
   [%stri
     let () = Eliom_runtime.close_server_section [%e e_hash]
   ][@metaloc loc]
@@ -101,7 +101,7 @@ let server_section ~loc =
 (** Client sections *)
 
 let client_section ~loc =
-  let e_hash = AC.str @@ string_of_int @@ file_hash loc in
+  let e_hash = AC.str @@ file_hash loc in
   [%stri
     let () = Eliom_runtime.open_client_section [%e e_hash]
   ][@metaloc loc]

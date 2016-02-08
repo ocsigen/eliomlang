@@ -45,12 +45,32 @@ let etuple ~loc = function
   | [e] -> e
   | l -> Exp.tuple ~loc l
 
+let ptuple ~loc = function
+  | [] ->  Ast_builder.Default.punit ~loc
+  | [e] -> e
+  | l -> Pat.tuple ~loc l
+
 let make_sequence ~loc l =
   let f e l = Exp.sequence ~loc:e.pexp_loc e l in
   List.fold_right f l (Ast_builder.Default.eunit ~loc)
 
+(* We use a strong hash (MD5) of the file name.
+   We only keep the first 36 bit, which should be well enough: with
+   256 files, the likelihood of a collision is about one in two
+   millions.
+   These bits are encoded using an OCaml-compatible variant of Base
+   64, as the hash is used to generate OCaml identifiers. *)
 let file_hash loc =
-  Hashtbl.hash @@ loc.Location.loc_start.pos_fname
+  let s = Digest.string loc.Location.loc_start.pos_fname in
+  let e = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'" in
+  let o = Bytes.create 6 in
+  let g p = Char.code s.[p] in
+  for i = 0 to 5 do
+    let p = i * 6 / 8 in
+    let d = 10 - (i * 6) mod 8 in
+    Bytes.set o i e.[(g p lsl 8 + g (p + 1)) lsr d land 63]
+  done;
+  Bytes.to_string o
 
 let lexing_position ~loc l =
   Exp.tuple ~loc [
@@ -93,25 +113,26 @@ module Name = struct
     end )
 
   module Map = struct
-    type 'a t = { i : int64 ; map : 'a M.t }
-    let empty = { i = 0L ; map = M.empty }
+    type t = { i : int ; map : (int * string) M.t }
+    let empty = { i = 0 ; map = M.empty }
     let seeded i = { i ; map = M.empty }
 
     let bindings {map} = M.bindings map
 
     let add make expr {i; map} =
       if M.mem expr map
-      then M.find expr map, {i ; map}
+      then snd @@ M.find expr map, {i ; map}
       else
         let hash = file_hash expr.pexp_loc in
         let s = make hash i in
-        let i = Int64.(add one) i in
-        s, {i ; map = M.add expr s map }
+        let v = (i,s) in
+        let i = i + 1 in
+        s, {i ; map = M.add expr v map }
 
     let is_empty {map} = M.is_empty map
 
     let value_bindings {map} =
-      let f (e, s) =
+      let f (e, (_,s)) =
         let loc = e.pexp_loc in
         Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
       in
@@ -119,20 +140,27 @@ module Name = struct
 
     let tuple ~loc {map} =
       let l = M.bindings map in
-      etuple ~loc @@ List.map (fun (_,v) -> Ast_builder.Default.evar ~loc v) l
+      etuple ~loc @@ List.map (fun (_,(_,v)) -> Ast_builder.Default.evar ~loc v) l
+
+    let kv ~loc {map} =
+      let l = M.bindings map in
+      let f (_,(i,v)) =
+        Exp.tuple ~loc Ast_builder.Default.[eint ~loc i ; evar ~loc v]
+      in
+      Exp.array ~loc @@ List.map f l
 
     let union { i ; map } { map = m2 } = { i ; map = M.fold M.add map m2 }
 
   end
 
   let escaped_ident_fmt : _ format6 =
-    "_eliom_escaped_%Ld"
+    "_eliom_escaped_%d"
 
   let fragment_ident_fmt : _ format6 =
-    "_eliom_fragment_%Ld"
+    "_eliom_fragment_%s"
 
   let injected_ident_fmt : _ format6 =
-    "_eliom_injection_%019d_%Ld"
+    "_eliom_injection_%6s%d"
 
   let add_escaped =
     let make _ i = Printf.sprintf escaped_ident_fmt i in
@@ -143,7 +171,7 @@ module Name = struct
     Map.add make
 
   let add_fragment =
-    let make _ i =  i in
+    let make hash i = Printf.sprintf "%s%d" hash i in
     Map.add make
 
   let make_injection = Printf.sprintf fragment_ident_fmt
