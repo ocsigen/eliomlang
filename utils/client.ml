@@ -1,6 +1,9 @@
 
 
 let typing sourcefile =
+  let val_dont_write_files = !Clflags.dont_write_files in
+  Clflags.dont_write_files := true;
+
   let ppf = Format.err_formatter in
   let outputprefix =
     Misc.chop_extension_if_any sourcefile
@@ -9,7 +12,13 @@ let typing sourcefile =
     Compenv.module_of_filename ppf sourcefile outputprefix
   in
   let env = Compmisc.initial_env() in
-  Typemod.type_implementation sourcefile outputprefix modulename env
+  let typedtree =
+    Typemod.type_implementation sourcefile outputprefix modulename env
+  in
+
+  Clflags.dont_write_files := val_dont_write_files;
+  typedtree
+
 
 
 let structure _mapper str =
