@@ -7,7 +7,7 @@ let flush () = match Lwt.get hook with
   | Some x ->
     let v = !x in x := [] ; v
   | None ->
-    (* "get" is only called by serial, which should only be called at the
+    (* "flush" is only called by serial, which should only be called at the
        end of a request handling. Hence this should never happen. *)
     assert false
 
