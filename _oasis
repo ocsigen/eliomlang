@@ -61,6 +61,14 @@ Library "eliom_runtime_client"
   InternalModules: Eliom_serial
   BuildDepends: js_of_ocaml, js_of_ocaml.ppx
 
+Library "eliom_runtime_lwt"
+  FindlibParent: runtime
+  FindlibName: lwt
+  Path: runtime/lwt
+  Modules: Eliom_lwt
+  BuildDepends: eliom_lang.runtime.server, lwt
+
+
 # Executable "eliomc"
 #   Path: src
 #   MainIs: main.ml

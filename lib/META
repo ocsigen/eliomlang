@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: f96e392471b835e8d065cafc605f0757)
+# DO NOT EDIT (digest: bd3b6d1b688b8d11b351f54afc26db1d)
 version = "0.1.0"
 description = "Eliom-lang"
 requires = "compiler-libs.common ppx_tools ppx_tools.metaquot ppx_core"
@@ -25,6 +25,17 @@ package "runtime" (
   archive(native) = "eliom_runtime_server.cmxa"
   archive(native, plugin) = "eliom_runtime_server.cmxs"
   exists_if = "eliom_runtime_server.cma"
+ )
+ 
+ package "lwt" (
+  version = "0.1.0"
+  description = "Eliom-lang"
+  requires = "eliom_lang.runtime.server lwt"
+  archive(byte) = "eliom_runtime_lwt.cma"
+  archive(byte, plugin) = "eliom_runtime_lwt.cma"
+  archive(native) = "eliom_runtime_lwt.cmxa"
+  archive(native, plugin) = "eliom_runtime_lwt.cmxs"
+  exists_if = "eliom_runtime_lwt.cma"
  )
  
  package "client" (

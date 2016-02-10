@@ -11,6 +11,12 @@ module Poly : sig
   val marshall : t -> string
 end
 
+module Global_data : sig
+
+  val serial : debug:bool -> Eliom_serial.global_data
+
+end
+
 module Request_data : sig
 
   type t = Eliom_serial.fragment list
@@ -18,11 +24,14 @@ module Request_data : sig
   exception Hook_alread_set
   exception Hook_not_set
 
-  val set_functions : (unit -> t) -> (Eliom_serial.fragment -> unit) -> unit
+  val set_functions : (unit -> t) -> (Eliom_serial.fragment -> bool) -> unit
+
+  val serial : debug:bool -> Eliom_serial.request_data
 
 end
 
-val eliom_script : debug:bool -> string
+val eliom_script :
+  Eliom_serial.global_data -> Eliom_serial.request_data -> string
 
 type +'a fragment = 'a Eliom_fragment.t
 

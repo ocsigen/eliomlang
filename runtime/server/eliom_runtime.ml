@@ -133,7 +133,7 @@ module Request_data = struct
 
   type hook = {
     get : unit -> t ;
-    add : Eliom_serial.fragment -> unit ;
+    add : Eliom_serial.fragment -> bool ;
   }
   let hook : hook option ref = ref None
 
@@ -172,9 +172,8 @@ let escape_cdata_script s =
     {|\n//<![CDATA[\n%s\n//]]>\n|}
     (Re.replace_string ~all:true closing_cdata ~by:"" s)
 
-let eliom_script ~debug =
-  let global = Some (Global_data.serial ~debug) in
-  let request = Request_data.serial ~debug in
+let eliom_script global request  =
+  let global = Some global in
   let data = {Eliom_serial. global ; request } in
   let script =
     Printf.sprintf
@@ -209,12 +208,14 @@ let register_fragment ~closure_id ~args ~value =
   let fragment_datum =
     Eliom_fragment.serial ~closure_id ~args value
   in
-  if !is_global then
-    (* We do not check if a request is not on going. *)
+  let b = Request_data.add fragment_datum in
+  if b then
+    (* Succesfully added to request data, nothing more to do *)
+    ()
+  else
+    (* Not in a request, must add to global data . *)
     current_server_section_data :=
       fragment_datum :: !current_server_section_data
-  else
-    Request_data.add fragment_datum
 
 let last_id = ref 0
 
