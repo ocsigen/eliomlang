@@ -1,6 +1,6 @@
 [@@@ocaml.warning "-3"]
 (* OASIS_START *)
-(* DO NOT EDIT (digest: bb72f479c32a4e59b63a770ff15a33b7) *)
+(* DO NOT EDIT (digest: bd669063314d58798c75cdef1d6d0b9e) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -610,6 +610,7 @@ let package_default =
   {
      MyOCamlbuildBase.lib_ocaml =
        [
+          ("eliom_typing", ["compiler/typing"], ["Annot"; "Outcometree"]);
           ("eliom_lang", ["lib"], []);
           ("runtime", ["runtime"], []);
           ("eliom_runtime_server", ["runtime/server"], []);
@@ -618,7 +619,8 @@ let package_default =
        ];
      lib_c = [];
      flags = [];
-     includes = [("utils", ["lib"]); ("runtime/lwt", ["runtime/server"])]
+     includes =
+       [("runtime/lwt", ["runtime/server"]); ("lib", ["compiler/typing"])]
   }
   ;;
 
@@ -626,7 +628,7 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 629 "myocamlbuild.ml"
+# 631 "myocamlbuild.ml"
 (* OASIS_STOP *)
 open Ocamlbuild_plugin
 

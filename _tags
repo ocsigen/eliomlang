@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: f52dee8d55eb78113a9803feb1fa3386)
+# DO NOT EDIT (digest: 2422021dd43f7bd9798730bc02c35ff8)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,35 +14,51 @@ true: annot, bin_annot
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
+# Library eliom_typing
+"compiler/typing/eliom_typing.cmxs": use_eliom_typing
+"compiler/typing/annot.cmx": for-pack(Eliom_typing)
+"compiler/typing/includemod.cmx": for-pack(Eliom_typing)
+"compiler/typing/tast_mapper.cmx": for-pack(Eliom_typing)
+"compiler/typing/btype.cmx": for-pack(Eliom_typing)
+"compiler/typing/mtype.cmx": for-pack(Eliom_typing)
+"compiler/typing/typeclass.cmx": for-pack(Eliom_typing)
+"compiler/typing/cmi_format.cmx": for-pack(Eliom_typing)
+"compiler/typing/oprint.cmx": for-pack(Eliom_typing)
+"compiler/typing/typecore.cmx": for-pack(Eliom_typing)
+"compiler/typing/cmt_format.cmx": for-pack(Eliom_typing)
+"compiler/typing/outcometree.cmx": for-pack(Eliom_typing)
+"compiler/typing/typedecl.cmx": for-pack(Eliom_typing)
+"compiler/typing/ctype.cmx": for-pack(Eliom_typing)
+"compiler/typing/parmatch.cmx": for-pack(Eliom_typing)
+"compiler/typing/typedtreeIter.cmx": for-pack(Eliom_typing)
+"compiler/typing/datarepr.cmx": for-pack(Eliom_typing)
+"compiler/typing/path.cmx": for-pack(Eliom_typing)
+"compiler/typing/typedtreeMap.cmx": for-pack(Eliom_typing)
+"compiler/typing/eliom_side.cmx": for-pack(Eliom_typing)
+"compiler/typing/predef.cmx": for-pack(Eliom_typing)
+"compiler/typing/typedtree.cmx": for-pack(Eliom_typing)
+"compiler/typing/envaux.cmx": for-pack(Eliom_typing)
+"compiler/typing/primitive.cmx": for-pack(Eliom_typing)
+"compiler/typing/typemod.cmx": for-pack(Eliom_typing)
+"compiler/typing/env.cmx": for-pack(Eliom_typing)
+"compiler/typing/printtyped.cmx": for-pack(Eliom_typing)
+"compiler/typing/types.cmx": for-pack(Eliom_typing)
+"compiler/typing/ident.cmx": for-pack(Eliom_typing)
+"compiler/typing/printtyp.cmx": for-pack(Eliom_typing)
+"compiler/typing/typetexp.cmx": for-pack(Eliom_typing)
+"compiler/typing/includeclass.cmx": for-pack(Eliom_typing)
+"compiler/typing/stypes.cmx": for-pack(Eliom_typing)
+"compiler/typing/untypeast.cmx": for-pack(Eliom_typing)
+"compiler/typing/includecore.cmx": for-pack(Eliom_typing)
+"compiler/typing/subst.cmx": for-pack(Eliom_typing)
+<compiler/typing/*.ml{,i,y}>: package(compiler-libs.common)
 # Library eliom_lang
 "lib/eliom_lang.cmxs": use_eliom_lang
 <lib/*.ml{,i,y}>: package(compiler-libs.common)
 <lib/*.ml{,i,y}>: package(ppx_core)
 <lib/*.ml{,i,y}>: package(ppx_tools)
 <lib/*.ml{,i,y}>: package(ppx_tools.metaquot)
-# Executable desugar
-"utils/desugar.byte": package(compiler-libs.common)
-"utils/desugar.byte": package(ppx_core)
-"utils/desugar.byte": package(ppx_tools)
-"utils/desugar.byte": package(ppx_tools.metaquot)
-"utils/desugar.byte": use_eliom_lang
-# Executable server
-"utils/server.byte": package(compiler-libs.common)
-"utils/server.byte": package(ppx_core)
-"utils/server.byte": package(ppx_tools)
-"utils/server.byte": package(ppx_tools.metaquot)
-"utils/server.byte": use_eliom_lang
-# Executable client
-"utils/client.byte": package(compiler-libs.common)
-"utils/client.byte": package(ppx_core)
-"utils/client.byte": package(ppx_tools)
-"utils/client.byte": package(ppx_tools.metaquot)
-"utils/client.byte": use_eliom_lang
-<utils/*.ml{,i,y}>: package(compiler-libs.common)
-<utils/*.ml{,i,y}>: package(ppx_core)
-<utils/*.ml{,i,y}>: package(ppx_tools)
-<utils/*.ml{,i,y}>: package(ppx_tools.metaquot)
-<utils/*.ml{,i,y}>: use_eliom_lang
+<lib/*.ml{,i,y}>: use_eliom_typing
 # Library runtime
 "runtime/runtime.cmxs": use_runtime
 # Library eliom_runtime_server
@@ -62,9 +78,10 @@ true: annot, bin_annot
 # Work around ppx_core issues
 <*/*.{native,byte}>: predicate(ppx_driver)
 
-true: warn(+A-4-6-9-40-42-44-48)
+not <compiler/**>: warn(+A-4-6-9-40-42-44-48)
+<compiler/**>: principal, warn(+33..39+48+50)
 true: warn_error(+1..49)
-true: strict_sequence, safe_string, short_paths
+true: strict_sequence, safe_string, short_paths, strict_formats
 true: bin_annot
 
 # Better locations and loc in .mlis

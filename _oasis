@@ -10,33 +10,32 @@ BuildTools:  ocamlbuild
 AlphaFeatures: ocamlbuild_more_args, pure_interface
 OCamlVersion:     >= 4.03.0
 
+Library "eliom_typing"
+  Path: compiler/typing
+  Pack: true
+  Modules: Annot, Includemod, Tast_mapper,
+    Btype, Mtype, Typeclass,
+    Cmi_format, Oprint, Typecore,
+    Cmt_format, Outcometree, Typedecl,
+    Ctype, Parmatch, TypedtreeIter,
+    Datarepr, Path, TypedtreeMap,
+    Eliom_side, Predef, Typedtree,
+    Envaux, Primitive, Typemod,
+    Env, Printtyped, Types,
+    Ident, Printtyp, Typetexp,
+    Includeclass, Stypes, Untypeast,
+    Includecore, Subst
+  BuildDepends: compiler-libs.common
+  Install: false
+
 Library "eliom_lang"
   FindlibName: eliom_lang
   Path: lib
   Modules: El_desugar, El_server, El_client
   InternalModules: El_utils
-  BuildDepends: compiler-libs.common, ppx_tools, ppx_tools.metaquot, ppx_core
-
-## Utils
-
-Executable "desugar"
-  Install: false
-  Path: utils
-  MainIs: desugar.ml
-  BuildDepends: eliom_lang
-
-Executable "server"
-  Install: false
-  Path: utils
-  MainIs: server.ml
-  BuildDepends: eliom_lang
-
-Executable "client"
-  Install: false
-  Path: utils
-  MainIs: client.ml
-  BuildDepends: eliom_lang
-
+  BuildDepends:
+    eliom_typing,
+    ppx_tools, ppx_tools.metaquot, ppx_core
 
 ## Runtime
 
@@ -60,6 +59,7 @@ Library "eliom_runtime_client"
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
   BuildDepends: js_of_ocaml, js_of_ocaml.ppx
+  CompiledObject: byte
 
 Library "eliom_runtime_lwt"
   FindlibParent: runtime
@@ -67,17 +67,6 @@ Library "eliom_runtime_lwt"
   Path: runtime/lwt
   Modules: Eliom_lwt
   BuildDepends: eliom_lang.runtime.server, lwt
-
-
-# Executable "eliomc"
-#   Path: src
-#   MainIs: main.ml
-#   BuildDepends: compiler-libs.bytecomp, eliom_lang
-
-# Executable "eliomopt"
-#   Path: src
-#   MainIs: optmain.ml
-#   BuildDepends: compiler-libs.optcomp, eliom_lang
 
 # Document "eliom-lang"
 #   Type: ocamlbuild (0.3)

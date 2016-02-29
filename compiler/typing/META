@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 6dc5afe69b91a6f78c45ae9d31c71d97)
+version = "0.1.0"
+description = "Eliom-lang"
+requires = "compiler-libs.common"
+archive(byte) = "eliom_typing.cma"
+archive(byte, plugin) = "eliom_typing.cma"
+archive(native) = "eliom_typing.cmxa"
+archive(native, plugin) = "eliom_typing.cmxs"
+exists_if = "eliom_typing.cma"
+# OASIS_STOP
+

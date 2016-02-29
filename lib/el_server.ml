@@ -1,3 +1,4 @@
+open Eliom_typing
 open Typedtree
 open Ast_helper
 open Ppx_core.Std

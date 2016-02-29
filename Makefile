@@ -1,3 +1,6 @@
+# Avoid findlib warnings about duplicated cmi
+export OCAMLFIND_IGNORE_DUPS_IN=compiler/typing/
+
 # OASIS_START
 # DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
 

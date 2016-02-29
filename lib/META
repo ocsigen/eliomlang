@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: bd3b6d1b688b8d11b351f54afc26db1d)
+# DO NOT EDIT (digest: 3c36bd6d5467b494c12cb25304e1f362)
 version = "0.1.0"
 description = "Eliom-lang"
-requires = "compiler-libs.common ppx_tools ppx_tools.metaquot ppx_core"
+requires = "eliom_typing ppx_tools ppx_tools.metaquot ppx_core"
 archive(byte) = "eliom_lang.cma"
 archive(byte, plugin) = "eliom_lang.cma"
 archive(native) = "eliom_lang.cmxa"
@@ -44,8 +44,6 @@ package "runtime" (
   requires = "js_of_ocaml js_of_ocaml.ppx"
   archive(byte) = "eliom_runtime_client.cma"
   archive(byte, plugin) = "eliom_runtime_client.cma"
-  archive(native) = "eliom_runtime_client.cmxa"
-  archive(native, plugin) = "eliom_runtime_client.cmxs"
   exists_if = "eliom_runtime_client.cma"
  )
 )
