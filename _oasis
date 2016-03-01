@@ -34,11 +34,19 @@ Library "eliom_typing"
 Library "eliom_lang"
   FindlibName: eliom_lang
   Path: lib
-  Modules: El_desugar, El_server, El_client
+  Modules: El_desugar, El_server, El_client, El_ppx
   InternalModules: El_utils
   BuildDepends:
     eliom_typing,
     ppx_tools, ppx_tools.metaquot, ppx_core
+  Install: false
+
+## Executable
+
+Executable "eliom_ppx"
+  Path: bin
+  MainIs: eliom_ppx.ml
+  BuildDepends: eliom_lang
 
 ## Runtime
 

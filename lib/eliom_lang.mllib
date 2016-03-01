@@ -1,7 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 69001e8cf75bcb6cab6df503afa58d94)
+# DO NOT EDIT (digest: 3f53ba064a13f542c2f01e84652ddbd2)
 El_desugar
 El_server
 El_client
+El_ppx
 El_utils
 # OASIS_STOP
