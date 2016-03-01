@@ -1,6 +1,5 @@
 open Parsetree
 open Ast_helper
-open Ppx_core.Std
 
 module AM = Ast_mapper
 module AC = Ast_convenience
@@ -70,31 +69,27 @@ module Shared = struct
 
 end
 
-let annotate_fragment ?typ exp =
-  let loc = exp.pexp_loc in
-  let typ = match typ with
-    | None -> [%type: _ Eliom_runtime.fragment][@metaloc loc]
-    | Some typ -> [%type: [%t typ] Eliom_runtime.fragment][@metaloc loc]
-  in
-  Exp.constraint_ ~loc exp typ
+module Section = struct
 
-(** Given a name map and a type, create an expression of the form
-    ((fun _ _ _ -> (assert false : ty) e_1 .. e_n)
-*)
-let make_poly ~loc ?id ?typ m =
-  let assert_false = [%expr assert false][@metaloc loc] in
-  let exp = annotate_fragment ?typ assert_false in
-  let arg = Name.Map.tuple ~loc m in
-  match id with
-  | Some id ->
-    let id = Ast_builder.Default.estring ~loc id in
-    [%expr
-      (fun _id _arg -> [%e exp]) [%e id] [%e arg]
-    ][@metaloc loc]
-  | None ->
-    [%expr
-      (fun _arg -> [%e exp]) [%e arg]
-    ][@metaloc loc]
+  let attribute ~side ~loc =
+    let txt = match side with
+      | `Fragment
+      | `Client -> "eliom.client"
+      | `Escaped_value | `Injection
+      | `Server -> "eliom.server"
+      | `Shared -> "eliom.shared"
+    in
+    {Location. txt ; loc}
+
+  let structure ~side ~loc str =
+    let s = attribute ~side ~loc in
+    Str.extension ~loc (s, PStr str)
+
+  let signature ~side ~loc si =
+    let s = attribute ~side ~loc in
+    Sig.extension ~loc (s, PSig si)
+
+end
 
 let mapper = object (self)
   inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
@@ -129,29 +124,14 @@ let mapper = object (self)
       self#expression context @@ exp_add_attrs (attrs@attrs') e
 
     (* [%client e ] with e = ... ~%x ...
-
-       let escp1 = x in
-       ((fun _ -> assert false) escp1)[@eliom.fragment a]
+       [%eliom.fragment e]
     *)
     | {pexp_desc = Pexp_extension ({txt},PStr [{pstr_desc = Pstr_eval (frag_exp,attrs)}])},
       `Server
       when is_annotation txt ["client"] ->
       let frag_exp = self#expression `Client frag_exp in
-      let frag_exp, typ = match frag_exp.pexp_desc with
-        | Pexp_constraint (e, typ) -> e, Some typ
-        | _ -> frag_exp, None
-      in
-      let frag_exp, m = collect_escaped frag_exp in
-      let eliom_attr =
-        Location.mkloc eliom_fragment_attr loc, PStr [Str.eval frag_exp]
-      in
-      let id, new_fragment_map = Name.add_fragment frag_exp fragment_map in
-      fragment_map <- new_fragment_map ;
-      let poly_exp =
-        exp_add_attrs (eliom_attr :: attrs) @@ make_poly ~loc ~id ?typ m
-      in
-      if Name.Map.is_empty m then poly_exp
-      else Exp.let_ ~loc Nonrecursive (Name.Map.value_bindings m) poly_exp
+      let s = {Location.loc ; txt = "eliom.fragment"} in
+      Exp.extension ~loc ~attrs (s, PStr [Str.eval ~loc frag_exp])
 
     (* ~%( ... ) ] *)
     | [%expr ~% [%e? inj ]], _ ->
@@ -171,55 +151,26 @@ let mapper = object (self)
       end
     | _ -> super#expression context expr
 
-  (** Client section translation.
-
-      We collect all injections, hoist them, and hide the client code in
-      a ppx attribute. See also client fragments.
-
-      The resulting code is of this shape:
-
-      let x1 = e1 and ...
-      let _ = ((fun _ _ -> assert false) x1 ...)
-        [@@eliom.section client_str]
-  *)
-  method private client_section stri =
-    let loc = stri.pstr_loc in
-    let stri = self#structure_item `Client stri in
-    let stri, new_m, new_injection_counter =
-      collect_injection stri injection_counter
-    in
-    injection_counter <- new_injection_counter ;
-    let exp = Name.Map.kv ~loc new_m in
-    let bindings =
-      Str.value ~loc Nonrecursive @@ Name.Map.value_bindings new_m
-    in
-    let attrs = [Location.mkloc eliom_section_attr loc, PStr [stri]] in
-    let s = Str.value ~loc Nonrecursive
-        [ Vb.mk ~loc ~attrs (Pat.any ~loc ()) exp ]
-    in
-    [ bindings ; s ]
-
-
   (** Toplevel translation *)
-  method private dispatch_str context x =
+  method private dispatch_str ~loc context x =
     match context with
     | `Shared ->
       let f x =
         let x = Shared.structure_item x in
         self#structure `Client [x.client] @ self#structure `Server [x.server]
       in flatmap f x
-    | `Client ->
-      flatmap self#client_section x
-    | #Context.t as c -> List.map (self#structure_item c) x
+    | #Context.t as side ->
+      [Section.structure ~side ~loc @@ List.map (self#structure_item side) x]
 
-  method private dispatch_sig context x =
+  method private dispatch_sig ~loc context x =
     match context with
     | `Shared ->
       let f x =
         let x = Shared.signature_item x in
         self#signature `Client [x.client] @ self#signature `Server [x.server]
       in flatmap f x
-    | #Context.t as c -> List.map (self#signature_item c) x
+    | #Context.t as side ->
+      [Section.signature ~side ~loc @@ List.map (self#signature_item side) x]
 
   method! structure context structs =
     let f c pstr =
@@ -234,12 +185,12 @@ let mapper = object (self)
         end
       | Pstr_extension (({txt}, PStr strs), _)
         when is_annotation txt ["shared"; "client" ;"server"] ->
-        (c, self#dispatch_str (Context.of_string txt) strs)
+        (c, self#dispatch_str ~loc (Context.of_string txt) strs)
       | Pstr_extension (({txt}, _), _)
         when is_annotation txt ["shared"; "client" ;"server"] ->
           c, [ str_error ~loc "Wrong payload for the %%%%%s extension." txt ]
       | _ ->
-        (c, self#dispatch_str c [pstr])
+        (c, self#dispatch_str ~loc c [pstr])
     in
     fold_accum f structs context
 
@@ -252,8 +203,14 @@ let mapper = object (self)
           c, [ sig_error ~loc
               "The %%%%%s extension doesn't accept arguments." txt ]
         else (Context.of_string txt, [])
+      | Psig_extension (({txt}, PSig sigs), _)
+        when is_annotation txt ["shared"; "client" ;"server"] ->
+        (c, self#dispatch_sig ~loc (Context.of_string txt) sigs)
+      | Psig_extension (({txt}, _), _)
+        when is_annotation txt ["shared"; "client" ;"server"] ->
+          c, [ sig_error ~loc "Wrong payload for the %%%%%s extension." txt ]
       | _ ->
-        (c, self#dispatch_sig c [psig])
+        (c, self#dispatch_sig ~loc c [psig])
     in
     fold_accum f sigs context
 
