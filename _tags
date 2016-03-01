@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: f7d84e7926e3f713710c81a4f55bee94)
+# DO NOT EDIT (digest: aa38cb9477ae7ee8c4fee264e6aa9e02)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -69,6 +69,13 @@ true: annot, bin_annot
 "bin/eliom_ppx.byte": package(ppx_tools.metaquot)
 "bin/eliom_ppx.byte": use_eliom_lang
 "bin/eliom_ppx.byte": use_eliom_typing
+# Executable eliom_desugar
+"bin/eliom_desugar.byte": package(compiler-libs.common)
+"bin/eliom_desugar.byte": package(ppx_core)
+"bin/eliom_desugar.byte": package(ppx_tools)
+"bin/eliom_desugar.byte": package(ppx_tools.metaquot)
+"bin/eliom_desugar.byte": use_eliom_lang
+"bin/eliom_desugar.byte": use_eliom_typing
 <bin/*.ml{,i,y}>: package(compiler-libs.common)
 <bin/*.ml{,i,y}>: package(ppx_core)
 <bin/*.ml{,i,y}>: package(ppx_tools)
