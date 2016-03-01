@@ -1,4 +1,3 @@
-open Eliom_typing
 
 let typing sourcefile str =
   let val_dont_write_files = !Clflags.dont_write_files in

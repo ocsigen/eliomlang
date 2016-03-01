@@ -102,3 +102,6 @@ true: bin_annot
 
 # Better locations and loc in .mlis
 true: keep_locs
+
+# We use the local typechecker in priority.
+<lib/**>: open(Eliom_typing)
