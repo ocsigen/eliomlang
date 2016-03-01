@@ -8,5 +8,6 @@ else
     OCAMLSRC=$1
 fi
 
-mkdir -p typing
+mkdir -p typing driver
 cp $OCAMLSRC/typing/*.ml* typing
+cp $OCAMLSRC/driver/compmisc.ml* driver/
