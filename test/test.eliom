@@ -11,6 +11,6 @@ let%client z = ~%(x+1) + ~%x
 
 (*
 Local Variables:
-compile-command: " ocamlc -dsource -ppx ../eliom_desugar.byte -impl test.eliom ; rm a.out *.cm*"
+compile-command: "ocamlc -dsource -ppx ../eliom_desugar.byte -impl test.eliom"
 End:
 *)
