@@ -58,12 +58,19 @@ let get_section_side str =
 
 (** Utilities on fragments and injections *)
 
+type eliom_expr =
+  | Expr of expression
+  | Fragment of
+      { attrs : attributes ; id : int ; expr : eliom_expr }
+  | Injection of
+      { attrs : attributes ; id : int ; expr : eliom_expr }
+
 let unfold_expression expr =
   let rec aux acc = function
-    | [] -> `Expr {expr with exp_attributes = List.rev acc}
+    | [] -> Expr {expr with exp_attributes = List.rev acc}
     | ({Location. txt = "eliom.fragment"},_)::t ->
-      `Fragment (List.rev acc, aux [] t)
+      Fragment {attrs = List.rev acc ; id = 0 ; expr = aux [] t }
     | ({Location. txt = "eliom.injection"},_)::t ->
-      `Injection (List.rev acc, aux [] t)
+      Injection {attrs = List.rev acc ; id = 0 ; expr = aux [] t }
     | h :: t -> aux (h::acc) t
   in aux [] expr.exp_attributes

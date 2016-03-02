@@ -217,22 +217,37 @@ let make_inj ~loc e =
 
     Can be applied both to client section and fragments.
 *)
-let collect f = object
-  inherit [_] Ppx_core.Ast_traverse.fold_map as super
+(* let collect f = object *)
+(*   inherit [_] Ppx_core.Ast_traverse.fold_map as super *)
+(*   method! expression expr acc = match expr with *)
+(*     | [%expr ~% [%e? inj ]] -> *)
+(*       let (s, m) = f inj acc in *)
+(*       let loc = expr.pexp_loc in *)
+(*       let e = Exp.ident ~loc @@ Location.mkloc (Longident.Lident s) loc in *)
+(*       make_inj ~loc e, m *)
+(*     | _ -> *)
+(*       super#expression expr acc *)
+(* end *)
+
+(* let collect_escaped e = *)
+(*   (collect Name.add_escaped)#expression e Name.Map.empty *)
+
+(* let collect_injection stri counter = *)
+(*   let new_map = Name.Map.seeded counter in *)
+(*   let stri, m = (collect Name.add_injection)#structure_item stri new_map in *)
+(*   stri, m, m.i *)
+
+let collect_obj = object
+  inherit [_] Ppx_core.Ast_traverse.fold as super
   method! expression expr acc = match expr with
     | [%expr ~% [%e? inj ]] ->
-      let (s, m) = f inj acc in
-      let loc = expr.pexp_loc in
-      let e = Exp.ident ~loc @@ Location.mkloc (Longident.Lident s) loc in
-      make_inj ~loc e, m
+      inj :: acc
     | _ ->
       super#expression expr acc
 end
 
 let collect_escaped e =
-  (collect Name.add_escaped)#expression e Name.Map.empty
+  collect_obj#expression e []
 
-let collect_injection stri counter =
-  let new_map = Name.Map.seeded counter in
-  let stri, m = (collect Name.add_injection)#structure_item stri new_map in
-  stri, m, m.i
+let collect_injection stri =
+  List.map (fun e -> (0,e)) @@ collect_obj#structure_item stri []
