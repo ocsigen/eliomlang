@@ -1,4 +1,5 @@
 open Typedtree
+module U = Untypeast
 
 (** Utilities on sections. *)
 
@@ -61,16 +62,63 @@ let get_section_side str =
 type eliom_expr =
   | Expr of expression
   | Fragment of
-      { attrs : attributes ; id : int ; expr : eliom_expr }
+      { attrs : attributes ; id : string ; expr : expression }
   | Injection of
-      { attrs : attributes ; id : int ; expr : eliom_expr }
+      { attrs : attributes ; id : string ; expr : expression }
 
 let unfold_expression expr =
   let rec aux acc = function
     | [] -> Expr {expr with exp_attributes = List.rev acc}
     | ({Location. txt = "eliom.fragment"},_)::t ->
-      Fragment {attrs = List.rev acc ; id = 0 ; expr = aux [] t }
+      Fragment {attrs = List.rev acc ; id = "foo" ; expr = {expr with exp_attributes = t} }
     | ({Location. txt = "eliom.injection"},_)::t ->
-      Injection {attrs = List.rev acc ; id = 0 ; expr = aux [] t }
+      Injection {attrs = List.rev acc ; id = "foo" ; expr = {expr with exp_attributes = t} }
     | h :: t -> aux (h::acc) t
   in aux [] expr.exp_attributes
+
+module Collect = struct
+
+  module Make () = struct
+    let r = ref []
+
+    include TypedtreeIter.MakeIterator(struct
+        include TypedtreeIter.DefaultIteratorArgument
+        let enter_expression e =
+          match unfold_expression e with
+          | Expr _ -> ()
+          | Injection {id ; attrs ; expr} -> r := (id, attrs , expr) :: !r
+          | Fragment _ -> assert false
+      end)
+  end
+
+  let escaped e =
+    let module M = Make () in
+    M.iter_expression e ;
+    List.rev !M.r
+
+  let injections stri =
+    let module M = Make () in
+    M.iter_structure_item stri ;
+    List.rev !M.r
+
+end
+
+module CollectMap = struct
+
+  let make f =
+    let expr mapper expr = match unfold_expression expr with
+      | Injection {id;attrs;expr} ->
+        f id expr attrs
+      | _ ->
+        U.default_mapper.expr mapper expr
+    in
+    {U.default_mapper with expr}
+
+  let escaped f e =
+    let m = make f in
+    m.expr m e
+
+  let injections f e =
+    let m = make f in
+    m.structure_item m e
+end

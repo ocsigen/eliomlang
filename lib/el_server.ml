@@ -1,6 +1,5 @@
 open Typedtree
 open Ast_helper
-open Ppx_core.Std
 
 module U = Untypeast
 module AM = Ast_mapper
@@ -30,9 +29,9 @@ let fragment ~loc id arg =
   ][@metaloc loc]
 
 let client_section ~loc injs =
-  let f e (i, inj) =
+  let f e (id, inj) =
     let loc = inj.Parsetree.pexp_loc in
-    let id = Ast_builder.Default.eint ~loc i in
+    let id = Exp.constant ~loc @@ Const.string id in
     let pos = position loc in
     [%expr
       ([%e id], Eliom_runtime.Poly.make [%e inj], [%e pos]) :: [%e e]
@@ -47,13 +46,16 @@ let client_section ~loc injs =
 
 let expr mapper e =
   let loc = e.exp_loc in
-  let rec aux = function
+  let aux = function
     | Expr e  -> U.default_mapper.expr mapper e
-    | Injection {expr} -> [%expr ~% [%e aux expr]]
+    | Injection _ -> exp_error ~loc "Eliom ICE: Unexpected injection"
     | Fragment {id ; expr} -> begin
-        let exp = aux expr in
-        let injs = collect_escaped exp in
-        fragment ~loc (Exp.constant ~loc @@ Const.int id) (etuple ~loc injs)
+        let injs =
+          List.map
+            (fun (_,_,e) -> U.default_mapper.expr U.default_mapper e)
+            (Collect.escaped expr)
+        in
+        fragment ~loc (Exp.constant ~loc @@ Const.string id) (etuple ~loc injs)
       end
   in
   aux @@ unfold_expression e
@@ -70,8 +72,10 @@ let structure_item mapper stri =
       server_section ~loc
     ]
   | Some `Client ->
-    let stri = U.default_mapper.structure_item mapper stri in
-    let injs = collect_injection stri in
+    let injs = List.map
+        (fun (id,attrs,e) -> id, exp_add_attrs attrs @@ U.default_mapper.expr mapper e)
+        (Collect.injections stri)
+    in
     [ client_section ~loc injs ]
 
 let structure mapper {str_items} =
