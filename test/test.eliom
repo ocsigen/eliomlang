@@ -1,7 +1,7 @@
 
 let%server x = 2
 
-let%server x' = [%client 3]
+let%server x' = [%client ~%x + ~%x]
 
 let%server y =
   [[%client (3 + ~%x + ~%(x+1) : int)]]

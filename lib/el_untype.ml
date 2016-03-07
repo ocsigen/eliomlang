@@ -109,44 +109,47 @@ let unfold_expression expr =
 
 module Collect = struct
 
+  module H = Hashtbl.Make(struct
+      include String
+      let hash = Hashtbl.hash
+    end)
+
   module Make () = struct
-    let r = ref []
+    let tbl = H.create 17
 
     include TypedtreeIter.MakeIterator(struct
         include TypedtreeIter.DefaultIteratorArgument
         let enter_expression e =
           match unfold_expression e with
           | Expr _ -> ()
-          | Injection x -> r := x :: !r
+          | Injection x -> H.replace tbl x.id x
           | Fragment _ -> assert false
       end)
   end
 
   let escaped e =
-    let module M = Make () in
-    M.iter_expression e ;
-    !M.r
+    let module I = Make () in
+    I.iter_expression e ;
+    H.fold (fun _k v l -> v::l) I.tbl []
 
   let injections stri =
-    let module M = Make () in
-    M.iter_structure_item stri ;
-    !M.r
+    let module I = Make () in
+    I.iter_structure_item stri ;
+    H.fold (fun _k v l -> v::l) I.tbl []
 
   let fragments str =
-    let frags = Hashtbl.create 17 in
+    let frags = H.create 17 in
     let module Iter = TypedtreeIter.MakeIterator(struct
         include TypedtreeIter.DefaultIteratorArgument
         let enter_expression e =
           match unfold_expression e with
           | Expr _ -> ()
           | Injection _ -> ()
-          | Fragment ({id} as r) -> begin
-              Hashtbl.add frags id r
-            end
+          | Fragment x -> H.replace frags x.id x
       end)
     in
     Iter.iter_structure_item str ;
-    Hashtbl.fold (fun _k v l -> v::l) frags []
+    H.fold (fun _k v l -> v::l) frags []
 
 
 end

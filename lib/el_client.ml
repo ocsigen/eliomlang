@@ -11,14 +11,16 @@ open El_untype
 (** Server sections *)
 
 let collect_escaped e =
-  let l = ref [] in
+  let tbl = Hashtbl.create 8 in
   let f {id = txt; attrs} =
     let loc = e.exp_loc in
     let lid = Location.mkloc (Longident.Lident txt) loc in
-    l := {Location.txt;loc} :: !l ;
+    Hashtbl.replace tbl txt {Location.txt;loc} ;
     Exp.ident ~loc ~attrs lid
   in
-  let x = CollectMap.escaped f e in x, !l
+  let x = CollectMap.escaped f e in
+  let l = Hashtbl.fold (fun _k v l -> v::l) tbl [] in
+  x, l
 
 let register_client_closure {id; expr} =
   let e, args = collect_escaped expr in
