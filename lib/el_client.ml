@@ -26,20 +26,15 @@ let get_fragments str =
   Iter.iter_structure_item str ;
   Hashtbl.fold (fun k v l -> (k,v)::l) frags []
 
-let make_escaped ~attrs (lid : _ Location.loc) =
-  let loc = lid.loc in
-  let e = Exp.ident ~loc ~attrs lid in
-  [%expr Eliom_runtime.get_escaped_value [%e e]][@metaloc loc]
-
 let collect_escaped e =
   let l = ref [] in
-  let f txt e attrs =
+  let f {id = txt; attrs} =
     let loc = e.exp_loc in
     let lid = Location.mkloc (Longident.Lident txt) loc in
     l := {Location.txt;loc} :: !l ;
-    make_escaped ~attrs lid
+    Exp.ident ~loc ~attrs lid
   in
-  CollectMap.escaped f e, !l
+  let x = CollectMap.escaped f e in x, !l
 
 let register_client_closure (id, e) =
   let e, args = collect_escaped e in
@@ -68,9 +63,9 @@ let server_section ~loc =
 
 (** Client sections *)
 
-let make_injection id e _attrs =
-  let loc = e.exp_loc in
-  let id = Exp.constant ~loc @@ Const.string id in
+let make_injection { id ; expr } =
+  let loc = expr.exp_loc in
+  let id = El_untype.Name.make_injection_id ~loc id in
   [%expr Eliom_runtime.get_injection [%e id]][@metaloc loc]
 
 let open_client_section ~loc =

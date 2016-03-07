@@ -26,9 +26,9 @@ let typing_mapper str =
   tstr
 
 let client_structure _mapper str =
-  El_client.structure @@ typing_mapper str
+  El_client.structure @@ El_untype.Name.annotate @@ typing_mapper str
 let server_structure _mapper str =
-  El_server.structure @@ typing_mapper str
+  El_server.structure @@ El_untype.Name.annotate @@ typing_mapper str
 
 let signature side _mapper = El_desugar.mapper#signature side
 

@@ -102,82 +102,6 @@ let is_annotation txt l =
 let eliom_section_attr = "eliom.section"
 let eliom_fragment_attr = "eliom.fragment"
 
-(** Identifiers generation. *)
-module Name = struct
-
-  module M = Map.Make(struct
-      type t = expression
-      let compare x y = match x.pexp_desc ,y.pexp_desc with
-        | Pexp_ident {txt = s1}, Pexp_ident {txt = s2} -> compare s1 s2
-        | _ -> compare x y
-    end )
-
-  module Map = struct
-    type t = { i : int ; map : (int * string) M.t }
-    let empty = { i = 0 ; map = M.empty }
-    let seeded i = { i ; map = M.empty }
-
-    let bindings {map} = M.bindings map
-
-    let add make expr {i; map} =
-      if M.mem expr map
-      then snd @@ M.find expr map, {i ; map}
-      else
-        let hash = file_hash expr.pexp_loc in
-        let s = make hash i in
-        let v = (i,s) in
-        let i = i + 1 in
-        s, {i ; map = M.add expr v map }
-
-    let is_empty {map} = M.is_empty map
-
-    let value_bindings {map} =
-      let f (e, (_,s)) =
-        let loc = e.pexp_loc in
-        Vb.mk ~loc (Pat.var ~loc @@ Location.mkloc s loc) e
-      in
-      List.map f @@ M.bindings map
-
-    let tuple ~loc {map} =
-      let l = M.bindings map in
-      etuple ~loc @@ List.map (fun (_,(_,v)) -> Ast_builder.Default.evar ~loc v) l
-
-    let kv ~loc {map} =
-      let l = M.bindings map in
-      let f (_,(i,v)) =
-        Exp.tuple ~loc Ast_builder.Default.[eint ~loc i ; evar ~loc v]
-      in
-      Exp.array ~loc @@ List.map f l
-
-    let union { i ; map } { map = m2 } = { i ; map = M.fold M.add map m2 }
-
-  end
-
-  let escaped_ident_fmt : _ format6 =
-    "_eliom_escaped_%d"
-
-  let fragment_ident_fmt : _ format6 =
-    "_eliom_fragment_%s"
-
-  let injected_ident_fmt : _ format6 =
-    "_eliom_injection_%6s%d"
-
-  let add_escaped =
-    let make _ i = Printf.sprintf escaped_ident_fmt i in
-    Map.add make
-
-  let add_injection =
-    let make hash i = Printf.sprintf injected_ident_fmt hash i in
-    Map.add make
-
-  let add_fragment =
-    let make hash i = Printf.sprintf "%s%d" hash i in
-    Map.add make
-
-  let make_injection = Printf.sprintf fragment_ident_fmt
-
-end
-
 (** Context convenience module. *)
 module Context = struct
 
@@ -207,47 +131,6 @@ module Context = struct
   ]
 end
 
-let open_eliom_pervasives = [%stri open Eliom_pervasives ]
 
 let make_inj ~loc e =
   [%expr ~% [%e e]][@metaloc loc]
-
-(** Collect all the injection expressions and substitute them by fresh
-    variables. Returns a map from variable to injections.
-
-    Can be applied both to client section and fragments.
-*)
-(* let collect f = object *)
-(*   inherit [_] Ppx_core.Ast_traverse.fold_map as super *)
-(*   method! expression expr acc = match expr with *)
-(*     | [%expr ~% [%e? inj ]] -> *)
-(*       let (s, m) = f inj acc in *)
-(*       let loc = expr.pexp_loc in *)
-(*       let e = Exp.ident ~loc @@ Location.mkloc (Longident.Lident s) loc in *)
-(*       make_inj ~loc e, m *)
-(*     | _ -> *)
-(*       super#expression expr acc *)
-(* end *)
-
-(* let collect_escaped e = *)
-(*   (collect Name.add_escaped)#expression e Name.Map.empty *)
-
-(* let collect_injection stri counter = *)
-(*   let new_map = Name.Map.seeded counter in *)
-(*   let stri, m = (collect Name.add_injection)#structure_item stri new_map in *)
-(*   stri, m, m.i *)
-
-let collect_obj = object
-  inherit [_] Ppx_core.Ast_traverse.fold as super
-  method! expression expr acc = match expr with
-    | [%expr ~% [%e? inj ]] ->
-      inj :: acc
-    | _ ->
-      super#expression expr acc
-end
-
-let collect_escaped e =
-  collect_obj#expression e []
-
-let collect_injection stri =
-  List.map (fun e -> (0,e)) @@ collect_obj#structure_item stri []

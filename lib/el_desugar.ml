@@ -94,9 +94,6 @@ end
 let mapper = object (self)
   inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
 
-  val mutable fragment_map = Name.Map.empty
-  val mutable injection_counter = 0
-
   method! expression context expr =
     let loc = expr.pexp_loc in
     let attrs = expr.pexp_attributes in

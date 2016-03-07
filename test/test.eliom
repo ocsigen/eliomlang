@@ -8,6 +8,8 @@ let%server y =
 
 let%client z = ~%(x+1) + ~%x
 
+let%client z2 = ~%(x+2) + ~%x
+
 
 (*
 Local Variables:

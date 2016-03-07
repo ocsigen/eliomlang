@@ -31,13 +31,13 @@ let fragment ~loc id arg =
 let client_section ~loc injs =
   let f e (id, inj) =
     let loc = inj.Parsetree.pexp_loc in
-    let id = Exp.constant ~loc @@ Const.string id in
+    let id = Exp.constant ~loc @@ Const.integer id in
     let pos = position loc in
     [%expr
       ([%e id], Eliom_runtime.Poly.make [%e inj], [%e pos]) :: [%e e]
     ][@metaloc loc]
   in
-  let l = List.fold_left f ([%expr []][@metaloc loc]) injs in
+  let l = List.fold_left f ([%expr []][@metaloc loc]) @@ injs in
   let e_hash = AC.str @@ file_hash loc in
   [%stri
     let () = Eliom_runtime.close_client_section [%e e_hash] [%e l]
@@ -51,8 +51,8 @@ let expr mapper e =
     | Injection _ -> exp_error ~loc "Eliom ICE: Unexpected injection"
     | Fragment {id ; expr} -> begin
         let injs =
-          List.map
-            (fun (_,_,e) -> U.default_mapper.expr U.default_mapper e)
+          List.rev_map
+            (fun {expr} -> U.default_mapper.expr U.default_mapper expr)
             (Collect.escaped expr)
         in
         fragment ~loc (Exp.constant ~loc @@ Const.string id) (etuple ~loc injs)
@@ -73,7 +73,8 @@ let structure_item mapper stri =
     ]
   | Some `Client ->
     let injs = List.map
-        (fun (id,attrs,e) -> id, exp_add_attrs attrs @@ U.default_mapper.expr mapper e)
+        (fun {id;attrs;expr} ->
+           id, exp_add_attrs attrs @@ U.default_mapper.expr mapper expr)
         (Collect.injections stri)
     in
     [ client_section ~loc injs ]
