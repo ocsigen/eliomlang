@@ -10,22 +10,6 @@ open El_untype
 
 (** Server sections *)
 
-let get_fragments str =
-  let frags = Hashtbl.create 17 in
-  let module Iter = TypedtreeIter.MakeIterator(struct
-      include TypedtreeIter.DefaultIteratorArgument
-      let enter_expression e =
-        match unfold_expression e with
-          | Expr _ -> ()
-          | Injection _ -> ()
-          | Fragment {id;expr} -> begin
-              Hashtbl.add frags id expr
-            end
-    end)
-  in
-  Iter.iter_structure_item str ;
-  Hashtbl.fold (fun k v l -> (k,v)::l) frags []
-
 let collect_escaped e =
   let l = ref [] in
   let f {id = txt; attrs} =
@@ -36,8 +20,8 @@ let collect_escaped e =
   in
   let x = CollectMap.escaped f e in x, !l
 
-let register_client_closure (id, e) =
-  let e, args = collect_escaped e in
+let register_client_closure {id; expr} =
+  let e, args = collect_escaped expr in
   let loc = e.Parsetree.pexp_loc in
   let id = Exp.constant ~loc @@ Const.string id in
   let f lid = Pat.var ~loc lid in
@@ -48,7 +32,7 @@ let register_client_closure (id, e) =
   ][@metaloc loc]
 
 let client_closures ~loc str =
-  let frags = get_fragments str in
+  let frags = Collect.fragments str in
   let l = List.map register_client_closure frags in
   match l with
   | [] -> []

@@ -20,6 +20,7 @@ val unfold_expression : expression -> eliom_expr
 module Collect : sig
   val escaped : expression -> eliom_expr_content list
   val injections : structure_item -> eliom_expr_content list
+  val fragments : structure_item -> eliom_expr_content list
 end
 
 module CollectMap : sig

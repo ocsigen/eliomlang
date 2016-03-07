@@ -132,6 +132,23 @@ module Collect = struct
     M.iter_structure_item stri ;
     !M.r
 
+  let fragments str =
+    let frags = Hashtbl.create 17 in
+    let module Iter = TypedtreeIter.MakeIterator(struct
+        include TypedtreeIter.DefaultIteratorArgument
+        let enter_expression e =
+          match unfold_expression e with
+          | Expr _ -> ()
+          | Injection _ -> ()
+          | Fragment ({id} as r) -> begin
+              Hashtbl.add frags id r
+            end
+      end)
+    in
+    Iter.iter_structure_item str ;
+    Hashtbl.fold (fun _k v l -> v::l) frags []
+
+
 end
 
 module CollectMap = struct
