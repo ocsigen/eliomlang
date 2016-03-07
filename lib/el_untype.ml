@@ -154,12 +154,20 @@ module CollectMap = struct
 end
 
 (** Identifiers generation. *)
+(* This is a global pass on the complete typedtree. It stores each injections,
+   escaped values and fragments in a map with a new generated identifier.
+   Fragments and injections ids are global to the file (plus the file hash).
+   Escaped values are local to the fragment.
+
+   The comparison function is tuned to share identical identifiers. It doesn't
+   share identical expressions (due to potential side effects).
+*)
 module Name = struct
   module M = Map.Make(struct
       type t = expression
       let compare x y = match x.exp_desc ,y.exp_desc with
         | Texp_ident (p1,_,_), Texp_ident (p2,_,_) -> compare p1 p2
-        | _ -> compare x y
+        | _ -> compare x y (* Not recursive! *)
     end )
 
   module Map = struct
@@ -180,11 +188,8 @@ module Name = struct
   let escaped_ident_fmt : _ format6 =
     "_eliom_escaped_%d"
 
-  (* let fragment_ident_fmt : _ format6 = *)
-  (*   "_eliom_fragment_%s" *)
-
   let hash_fmt : _ format6 =
-    "%6s%s"
+    "%s%s"
 
   let add_escaped =
     let make _ i = Printf.sprintf escaped_ident_fmt i in
@@ -202,6 +207,9 @@ module Name = struct
     let hash = El_utils.file_hash loc in
     Exp.constant ~loc @@ Const.string (Printf.sprintf hash_fmt hash txt)
 
+  (* This implementation is complicated by the fact that typedtree iterators
+     are not functional. We need to maintain references and stack manually.
+  *)
   (* This is probably buggy for multi nested frag/inj. TODO *)
   let annotate str =
     let fragmap = ref Map.empty in
