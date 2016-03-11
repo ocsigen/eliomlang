@@ -23,6 +23,8 @@ OCAMLFLAGS = \
     -strict-sequence -safe-string -short-paths -strict-formats \
     -g -bin-annot -keep-locs
 
+# Avoid many findlib warnings
+setenv(OCAMLFIND_IGNORE_DUPS_IN,$(absname compiler/))
 
 # Dynamically scoped vars to set:
 # ROOT, root directory of source files
