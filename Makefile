@@ -28,7 +28,11 @@ reinstall: setup.data
 	$(SETUP) -reinstall $(REINSTALLFLAGS)
 
 clean:
-	$(SETUP) -clean $(CLEANFLAGS)
+	@find . -iname "*.cmx" -or -iname "*.a" -or -iname "*.o" -or -iname "*.cma" -or -iname "*.cmi" -or \
+		-iname "*.cmxa" -or -iname "*.cmo" -or -iname "*.cmt" -or \
+		-iname "*.cmti" -or -iname "*.cmxs" -or -iname "*.run" | xargs rm -rf
+	@rm -rf *.omc .omakedb .omakedb.lock
+#   $(SETUP) -clean $(CLEANFLAGS)
 
 distclean:
 	$(SETUP) -distclean $(DISTCLEANFLAGS)
@@ -72,3 +76,4 @@ release:
 	git tag -a $(VERSION) -m "Version $(VERSION)."
 	git push upstream $(VERSION)
 	$(MAKE) pr
+
