@@ -18,7 +18,11 @@ USE_OCAMLFIND = true
 BYTE_ENABLED = true
 CMXS_ENABLED = $(NATIVE_ENABLED) # need omake in git for this
 
-OCAMLFLAGS = -g -bin-annot -thread
+OCAMLFLAGS = \
+    -warn-error +1..49 \
+    -strict-sequence -safe-string -short-paths -strict-formats \
+    -g -bin-annot -keep-locs
+
 
 # Dynamically scoped vars to set:
 # ROOT, root directory of source files
@@ -58,12 +62,15 @@ Subprj(name) =
                 .DEFAULT: $(OCamlLibrary $(name), $(SOURCES))
 section
     ROOT = $(dir compiler)
+    OCAMLFLAGS += -w +33..39+48+50
     OCAMLPACKS = compiler-libs.common
     PACK = true
     SOURCES = $(Modules $(ROOT))
     Subprj(eliom_typing)
     export PRJ_MAP
 
+
+OCAMLFLAGS += -w +A-4-6-9-40-42-44-48
 
 section
     ROOT = $(dir lib)
@@ -77,6 +84,7 @@ section
 foreach(bin => ..., eliom_desugar eliom_ppx)
     section
         IS_EXE = true
+        OCAMLFLAGS += -w +A-4-6-9-40-42-44-48
         OCAMLFINDFLAGS += -predicates ppx_driver
         ROOT = $(dir bin)
         LOCAL_DEPS = eliom_lang
