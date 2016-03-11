@@ -73,24 +73,16 @@ section
     Subprj(eliom_lang)
     export PRJ_MAP
 
-section
-    EXE = true
-    OCAMLFINDFLAGS += -predicates ppx_driver
-    ROOT = $(dir bin)
-    LOCAL_DEPS = eliom_lang
-    OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
-    SOURCES = $(Modules $(ROOT))
-    Subprj(eliom_ppx)
-    # not need to export prj_map for exe's
-
-section
-    EXE = true
-    OCAMLFINDFLAGS += -predicates ppx_driver
-    ROOT = $(dir bin)
-    LOCAL_DEPS = eliom_lang
-    OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
-    SOURCES = $(Modules $(ROOT))
-    Subprj(eliom_desugar)
+# not need to export prj_map for exe's
+foreach(bin => ..., eliom_desugar eliom_ppx)
+    section
+        EXE = true
+        OCAMLFINDFLAGS += -predicates ppx_driver
+        ROOT = $(dir bin)
+        LOCAL_DEPS = eliom_lang
+        OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
+        SOURCES = $(bin)
+        Subprj($(bin))
 
 ELIOM_SOURCES = eliom_runtime eliom_wrap eliom_fragment eliom_serial
 
