@@ -1,0 +1,113 @@
+# Move these to some .om lib file
+Modules(path) =
+    return $(set $(basename $(removesuffix $(find $(path) -name *.ml -o -name *.mli))))
+
+BUILD_ROOT = $(dir .) # in case we want hygiene later
+
+MakeDep(ps) =
+    foreach(p => ...,$(ps))
+        PRJ = $(PRJ_MAP.find $p)
+        if $(not $(PRJ.PACK))
+            OCAMLINCLUDES += $(PRJ.ROOT)
+            export
+        OCAML_LIBS += $(PRJ.ROOT)/$p
+        export
+    export
+
+USE_OCAMLFIND = true
+BYTE_ENABLED = true
+CMXS_ENABLED = $(NATIVE_ENABLED) # need omake in git for this
+
+OCAMLFLAGS = -g -bin-annot -thread
+
+# Dynamically scoped vars to set:
+# ROOT, root directory of source files
+# SOURCES, contains all source files. You can also generate these with the Modules
+# function. Just made it similar like this for oasis
+# LOCAL_DEPS, local dependencies
+
+# just initializing
+LOCAL_DEPS =
+PACK = false
+EXE = false
+
+# this is what we get for being clever and mismatching names and project dirs
+# now we need to save the prj -> dir mapping somewhere :(
+# btw, you can do a similar trick for transitive deps too. But I don't mind
+# writing them out personally b/c it's easy
+PRJ_MAP. =
+    extends $(Map)
+
+Subprj(name) =
+    PRJ. = # fuck omake...
+        DIRS = $(foreach t => $(dir $(ROOT)/$t), $(set $(dirname $(SOURCES))))
+        ROOT = $(ROOT)
+        PACK = $(PACK)
+    PRJ_MAP = $(PRJ_MAP.add $(name),$(PRJ))
+    export PRJ_MAP
+    .SUBDIRS: $(ROOT)
+        MakeDep($(LOCAL_DEPS))
+        if $(PACK)
+            .DEFAULT: $(OCamlPackage $(name), $(SOURCES))
+        else
+            if $(EXE)
+                .DEFAULT: $(OCamlProgram $(name), $(SOURCES))
+            else
+                .DEFAULT: $(OCamlLibrary $(name), $(SOURCES))
+section
+    ROOT = $(dir compiler)
+    OCAMLPACKS = compiler-libs.common
+    PACK = true
+    SOURCES = $(Modules $(ROOT))
+    Subprj(eliom_typing)
+    export PRJ_MAP
+
+
+section
+    ROOT = $(dir lib)
+    LOCAL_DEPS = eliom_typing
+    OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
+    SOURCES = $(Modules $(ROOT))
+    Subprj(eliom_lang)
+    export PRJ_MAP
+
+section
+    EXE = true
+    ROOT = $(dir bin)
+    LOCAL_DEPS = eliom_lang
+    OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
+    SOURCES = $(Modules $(ROOT))
+    Subprj(eliom_ppx)
+    # not need to export prj_map for exe's
+
+section
+    EXE = true
+    ROOT = $(dir bin)
+    LOCAL_DEPS = eliom_lang
+    OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
+    SOURCES = $(Modules $(ROOT))
+    Subprj(eliom_desugar)
+
+ELIOM_SOURCES = eliom_runtime eliom_wrap eliom_fragment eliom_serial
+
+section
+    ROOT = $(dir runtime/server)
+    SOURCES = $(ELIOM_SOURCES)
+    OCAMLPACKS = re
+    Subprj(eliom_runtime_server)
+    export PRJ_MAP
+
+section
+    ROOT = $(dir runtime/client)
+    SOURCES = $(ELIOM_SOURCES)
+    OCAMLPACKS = js_of_ocaml js_of_ocaml.ppx
+    Subprj(eliom_runtime_client)
+    export PRJ_MAP
+
+section
+    ROOT = $(dir runtime/lwt)
+    SOURCES = Eliom_lwt
+    OCAMLPACKS = lwt
+    LOCAL_DEPS = eliom_runtime_server
+    Subprj(eliom_runtime_server)
+    export PRJ_MAP
