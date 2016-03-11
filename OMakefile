@@ -105,6 +105,9 @@ section
 
 section
     ROOT = $(dir runtime/client)
+    # Disable native building for js_of_ocaml libraries.
+    NATIVE_ENABLED = false
+    CMXS_ENABLED = false
     SOURCES = $(ELIOM_SOURCES)
     OCAMLPACKS = js_of_ocaml js_of_ocaml.ppx
     Subprj(eliom_runtime_client)
