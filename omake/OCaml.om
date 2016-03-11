@@ -906,9 +906,10 @@ public.OCamlPackage(name, files) =
 
    protected.NATIVE_DEPS = $(CMXFILES) $(OFILES)
 
-   section
-      OCAMLOPTFLAGS += -for-pack $(capitalize $(name))
+   section rule
+      OCAMLFLAGS += -for-pack $(capitalize $(name))
       $(NATIVE_DEPS):
+      $(BYTE_TARGETS):
 
    $(NATIVE_TARGETS): $(NATIVE_DEPS)
       section rule
