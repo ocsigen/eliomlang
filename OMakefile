@@ -29,7 +29,7 @@ OCAMLFLAGS = -g -bin-annot -thread
 # just initializing
 LOCAL_DEPS =
 PACK = false
-EXE = false
+IS_EXE = false
 
 # this is what we get for being clever and mismatching names and project dirs
 # now we need to save the prj -> dir mapping somewhere :(
@@ -52,7 +52,7 @@ Subprj(name) =
         if $(PACK)
             .DEFAULT: $(OCamlPackage $(name), $(SOURCES))
         else
-            if $(EXE)
+            if $(IS_EXE)
                 .DEFAULT: $(OCamlProgram $(name), $(SOURCES))
             else
                 .DEFAULT: $(OCamlLibrary $(name), $(SOURCES))
@@ -76,7 +76,7 @@ section
 # not need to export prj_map for exe's
 foreach(bin => ..., eliom_desugar eliom_ppx)
     section
-        EXE = true
+        IS_EXE = true
         OCAMLFINDFLAGS += -predicates ppx_driver
         ROOT = $(dir bin)
         LOCAL_DEPS = eliom_lang
