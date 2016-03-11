@@ -2,11 +2,11 @@
 Modules(path) =
     return $(set $(basename $(removesuffix $(find $(path) -name *.ml -o -name *.mli))))
 
-BUILD_ROOT = $(dir .) # in case we want hygiene later
-
 MakeDep(ps) =
     foreach(p => ...,$(ps))
         PRJ = $(PRJ_MAP.find $p)
+        # Need this so that modules inside pack aren't accessible outside the
+        # pack (or at least I think this accomplishes it). Who knows...
         if $(not $(PRJ.PACK))
             OCAMLINCLUDES += $(PRJ.ROOT)
             export
@@ -40,9 +40,11 @@ PRJ_MAP. =
 
 Subprj(name) =
     PRJ. = # fuck omake...
-        DIRS = $(foreach t => $(dir $(ROOT)/$t), $(set $(dirname $(SOURCES))))
         ROOT = $(ROOT)
         PACK = $(PACK)
+        # you can also imagine storing hte ocamlpacks here so that you
+        # don't have to duplicate them
+
     PRJ_MAP = $(PRJ_MAP.add $(name),$(PRJ))
     export PRJ_MAP
     .SUBDIRS: $(ROOT)
@@ -73,6 +75,7 @@ section
 
 section
     EXE = true
+    OCAMLFINDFLAGS += -predicates ppx_driver
     ROOT = $(dir bin)
     LOCAL_DEPS = eliom_lang
     OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
@@ -82,6 +85,7 @@ section
 
 section
     EXE = true
+    OCAMLFINDFLAGS += -predicates ppx_driver
     ROOT = $(dir bin)
     LOCAL_DEPS = eliom_lang
     OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
@@ -106,8 +110,8 @@ section
 
 section
     ROOT = $(dir runtime/lwt)
-    SOURCES = Eliom_lwt
+    SOURCES = eliom_lwt
     OCAMLPACKS = lwt
     LOCAL_DEPS = eliom_runtime_server
-    Subprj(eliom_runtime_server)
+    Subprj(eliom_runtime_lwt)
     export PRJ_MAP
