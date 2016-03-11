@@ -1,51 +1,24 @@
-# Avoid findlib warnings about duplicated cmi
-export OCAMLFIND_IGNORE_DUPS_IN=compiler/typing/
+.DEFAULT: build
 
-# OASIS_START
-# DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
+build:
+	@omake -j4
 
-SETUP = ocaml setup.ml
+all: build
 
-build: setup.data
-	$(SETUP) -build $(BUILDFLAGS)
+install:
+	@omake install
 
-doc: setup.data build
-	$(SETUP) -doc $(DOCFLAGS)
-
-test: setup.data build
-	$(SETUP) -test $(TESTFLAGS)
-
-all:
-	$(SETUP) -all $(ALLFLAGS)
-
-install: setup.data
-	$(SETUP) -install $(INSTALLFLAGS)
-
-uninstall: setup.data
-	$(SETUP) -uninstall $(UNINSTALLFLAGS)
-
-reinstall: setup.data
-	$(SETUP) -reinstall $(REINSTALLFLAGS)
+uninstall:
+	@omake uninstall
 
 clean:
-	@find . -iname "*.cmx" -or -iname "*.a" -or -iname "*.o" -or -iname "*.cma" -or -iname "*.cmi" -or \
+	@find . -iname "*.cmx" -or -iname "*.a" -or -iname "*.o" -or \
+    -iname "*.cma" -or -iname "*.cmi" -or \
 		-iname "*.cmxa" -or -iname "*.cmo" -or -iname "*.cmt" -or \
 		-iname "*.cmti" -or -iname "*.cmxs" -or -iname "*.run" | xargs rm -rf
 	@rm -rf *.omc .omakedb .omakedb.lock
-#   $(SETUP) -clean $(CLEANFLAGS)
 
-distclean:
-	$(SETUP) -distclean $(DISTCLEANFLAGS)
-
-setup.data:
-	$(SETUP) -configure $(CONFIGUREFLAGS)
-
-configure:
-	$(SETUP) -configure $(CONFIGUREFLAGS)
-
-.PHONY: build doc test all install uninstall reinstall clean distclean configure
-
-# OASIS_STOP
+.PHONY: all build install uninstall clean check%
 
 NAME    = $(shell grep 'Name:' _oasis    | sed 's/Name: *//')
 VERSION = $(shell grep 'Version:' _oasis | sed 's/Version: *//')
@@ -77,3 +50,4 @@ release:
 	git push upstream $(VERSION)
 	$(MAKE) pr
 
+.PHONY: gh-pages release
