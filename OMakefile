@@ -5,11 +5,7 @@ Modules(path) =
 MakeDep(ps) =
     foreach(p => ...,$(ps))
         PRJ = $(PRJ_MAP.find $p)
-        # Need this so that modules inside pack aren't accessible outside the
-        # pack (or at least I think this accomplishes it). Who knows...
-        if $(not $(PRJ.PACK))
-            OCAMLINCLUDES += $(PRJ.ROOT)
-            export
+        OCAMLINCLUDES += $(PRJ.ROOT)
         OCAML_LIBS += $(PRJ.ROOT)/$p
         export
     export
@@ -78,7 +74,7 @@ OCAMLFLAGS += -w +A-4-6-9-40-42-44-48
 section
     ROOT = $(dir lib)
     LOCAL_DEPS = eliom_typing
-    #OCAMLFLAGS += -open Eliom_typing
+    OCAMLFLAGS += -open Eliom_typing
     OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
     SOURCES = $(Modules $(ROOT))
     Subprj(eliom_lang)
@@ -89,10 +85,9 @@ foreach(bin => ..., eliom_desugar eliom_ppx)
     section
         IS_EXE = true
         OCAMLFLAGS += -w +A-4-6-9-40-42-44-48
-        #OCAMLFLAGS += -open Eliom_typing
         OCAMLFINDFLAGS += -predicates ppx_driver
         ROOT = $(dir bin)
-        LOCAL_DEPS = eliom_lang
+        LOCAL_DEPS = eliom_typing eliom_lang
         OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
         SOURCES = $(bin)
         Subprj($(bin))
