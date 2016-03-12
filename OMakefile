@@ -55,11 +55,12 @@ Subprj(name) =
     export PRJ_MAP
     .SUBDIRS: $(ROOT)
         MakeDep($(LOCAL_DEPS))
-        if $(PACK)
-            .DEFAULT: $(OCamlPackage $(name), $(SOURCES))
+        if $(IS_EXE)
+            .DEFAULT: $(OCamlProgram $(name), $(SOURCES))
         else
-            if $(IS_EXE)
-                .DEFAULT: $(OCamlProgram $(name), $(SOURCES))
+            if $(PACK)
+                FILES= $(OCamlPackage $(name), $(SOURCES))
+                .DEFAULT: $(OCamlLibrary $(name), $(ROOT)/$(name))
             else
                 .DEFAULT: $(OCamlLibrary $(name), $(SOURCES))
 section
@@ -77,6 +78,7 @@ OCAMLFLAGS += -w +A-4-6-9-40-42-44-48
 section
     ROOT = $(dir lib)
     LOCAL_DEPS = eliom_typing
+    #OCAMLFLAGS += -open Eliom_typing
     OCAMLPACKS = ppx_tools ppx_tools.metaquot ppx_core
     SOURCES = $(Modules $(ROOT))
     Subprj(eliom_lang)
@@ -87,6 +89,7 @@ foreach(bin => ..., eliom_desugar eliom_ppx)
     section
         IS_EXE = true
         OCAMLFLAGS += -w +A-4-6-9-40-42-44-48
+        #OCAMLFLAGS += -open Eliom_typing
         OCAMLFINDFLAGS += -predicates ppx_driver
         ROOT = $(dir bin)
         LOCAL_DEPS = eliom_lang
