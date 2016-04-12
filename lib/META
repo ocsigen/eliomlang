@@ -1,51 +1,12 @@
 # OASIS_START
-# DO NOT EDIT (digest: 3c36bd6d5467b494c12cb25304e1f362)
+# DO NOT EDIT (digest: c06ff45edd47f34ccff11b4a0729ce72)
 version = "0.1.0"
 description = "Eliom-lang"
 requires = "eliom_typing ppx_tools ppx_tools.metaquot ppx_core"
-archive(byte) = "eliom_lang.cma"
-archive(byte, plugin) = "eliom_lang.cma"
-archive(native) = "eliom_lang.cmxa"
-archive(native, plugin) = "eliom_lang.cmxs"
-exists_if = "eliom_lang.cma"
-package "runtime" (
- version = "0.1.0"
- description = "Eliom-lang"
- archive(byte) = "runtime.cma"
- archive(byte, plugin) = "runtime.cma"
- archive(native) = "runtime.cmxa"
- archive(native, plugin) = "runtime.cmxs"
- exists_if = "runtime.cma"
- package "server" (
-  version = "0.1.0"
-  description = "Eliom-lang"
-  requires = "re"
-  archive(byte) = "eliom_runtime_server.cma"
-  archive(byte, plugin) = "eliom_runtime_server.cma"
-  archive(native) = "eliom_runtime_server.cmxa"
-  archive(native, plugin) = "eliom_runtime_server.cmxs"
-  exists_if = "eliom_runtime_server.cma"
- )
- 
- package "lwt" (
-  version = "0.1.0"
-  description = "Eliom-lang"
-  requires = "eliom_lang.runtime.server lwt"
-  archive(byte) = "eliom_runtime_lwt.cma"
-  archive(byte, plugin) = "eliom_runtime_lwt.cma"
-  archive(native) = "eliom_runtime_lwt.cmxa"
-  archive(native, plugin) = "eliom_runtime_lwt.cmxs"
-  exists_if = "eliom_runtime_lwt.cma"
- )
- 
- package "client" (
-  version = "0.1.0"
-  description = "Eliom-lang"
-  requires = "js_of_ocaml js_of_ocaml.ppx"
-  archive(byte) = "eliom_runtime_client.cma"
-  archive(byte, plugin) = "eliom_runtime_client.cma"
-  exists_if = "eliom_runtime_client.cma"
- )
-)
+archive(byte) = "eliom_lang_ppx.cma"
+archive(byte, plugin) = "eliom_lang_ppx.cma"
+archive(native) = "eliom_lang_ppx.cmxa"
+archive(native, plugin) = "eliom_lang_ppx.cmxs"
+exists_if = "eliom_lang_ppx.cma"
 # OASIS_STOP
 

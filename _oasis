@@ -31,8 +31,7 @@ Library "eliom_typing"
   BuildDepends: compiler-libs.common
   Install: false
 
-Library "eliom_lang"
-  FindlibName: eliom_lang
+Library "eliom_lang_ppx"
   Path: lib
   Modules: El_desugar, El_server, El_client, El_ppx, El_untype
   InternalModules: El_utils
@@ -46,31 +45,28 @@ Library "eliom_lang"
 Executable "eliom_ppx"
   Path: bin
   MainIs: eliom_ppx.ml
-  BuildDepends: eliom_lang
+  BuildDepends: eliom_lang_ppx
 
 Executable "eliom_desugar"
   Path: bin
   MainIs: eliom_desugar.ml
-  BuildDepends: eliom_lang
+  BuildDepends: eliom_lang_ppx
 
 ## Runtime
 
-Library "runtime"
-  FindlibParent: eliom_lang
-  FindlibName: runtime
-  Path: runtime
-
 Library "eliom_runtime_server"
-  FindlibParent: runtime
+  FindlibContainers: eliom_lang.runtime
   FindlibName: server
+  FindlibDirectory: server
   Path: runtime/server
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
   BuildDepends: re
 
 Library "eliom_runtime_client"
-  FindlibParent: runtime
+  FindlibContainers: eliom_lang.runtime
   FindlibName: client
+  FindlibDirectory: client
   Path: runtime/client
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
@@ -78,8 +74,9 @@ Library "eliom_runtime_client"
   CompiledObject: byte
 
 Library "eliom_runtime_lwt"
-  FindlibParent: runtime
+  FindlibContainers: eliom_lang.runtime
   FindlibName: lwt
+  FindlibDirectory: lwt
   Path: runtime/lwt
   Modules: Eliom_lwt
   BuildDepends: eliom_lang.runtime.server, lwt

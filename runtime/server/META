@@ -1,0 +1,38 @@
+# OASIS_START
+# DO NOT EDIT (digest: 92052bf1aea71b1374da9f033b9af7dd)
+package "runtime" (
+ description = "Virtual container"
+ package "server" (
+  version = "0.1.0"
+  description = "Eliom-lang"
+  directory = "server"
+  requires = "re"
+  archive(byte) = "eliom_runtime_server.cma"
+  archive(byte, plugin) = "eliom_runtime_server.cma"
+  archive(native) = "eliom_runtime_server.cmxa"
+  archive(native, plugin) = "eliom_runtime_server.cmxs"
+  exists_if = "eliom_runtime_server.cma"
+ )
+ package "lwt" (
+  version = "0.1.0"
+  description = "Eliom-lang"
+  directory = "lwt"
+  requires = "eliom_lang.runtime.server lwt"
+  archive(byte) = "eliom_runtime_lwt.cma"
+  archive(byte, plugin) = "eliom_runtime_lwt.cma"
+  archive(native) = "eliom_runtime_lwt.cmxa"
+  archive(native, plugin) = "eliom_runtime_lwt.cmxs"
+  exists_if = "eliom_runtime_lwt.cma"
+ )
+ package "client" (
+  version = "0.1.0"
+  description = "Eliom-lang"
+  directory = "client"
+  requires = "js_of_ocaml js_of_ocaml.ppx"
+  archive(byte) = "eliom_runtime_client.cma"
+  archive(byte, plugin) = "eliom_runtime_client.cma"
+  exists_if = "eliom_runtime_client.cma"
+ )
+)
+# OASIS_STOP
+
