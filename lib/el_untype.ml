@@ -42,7 +42,7 @@ let map_mod_attr f = function
 (** Attribute extraction *)
 module Attr = struct
   let get {Location.txt} = match txt with
-    | "eliom.fragment"  -> Some `Fragment
+    | "eliom.client"  -> Some `Fragment
     | "eliom.injection" -> Some `Injection
     | _ -> None
 

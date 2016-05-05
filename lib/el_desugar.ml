@@ -92,26 +92,12 @@ module Section = struct
 end
 
 let mapper = object (self)
-  inherit [Context.shared] Ppx_core.Ast_traverse.map_with_context as super
+  inherit [Context.t] Ppx_core.Ast_traverse.map_with_context as super
 
   method! expression context expr =
     let loc = expr.pexp_loc in
     let attrs = expr.pexp_attributes in
     match expr, context with
-    | {pexp_desc = Pexp_extension ({txt},_)},
-      `Client
-      when is_annotation txt ["client"; "shared"] ->
-      let side = get_extension expr in
-      exp_error ~loc
-        "The syntax [%%%s ...] is not allowed inside client code."
-        side
-    | {pexp_desc = Pexp_extension ({txt},_)}
-    , (`Fragment | `Escaped_value | `Injection)
-      when is_annotation txt ["client"; "shared"] ->
-      let side = get_extension expr in
-      exp_error ~loc
-        "The syntax [%%%s ...] can not be nested."
-        side
 
     (* [%shared ... ] *)
     | {pexp_desc = Pexp_extension ({txt},PStr [{pstr_desc = Pstr_eval (frag_exp,attrs')}])},
@@ -120,32 +106,6 @@ let mapper = object (self)
       let e = Shared.expression ~loc frag_exp in
       self#expression context @@ exp_add_attrs (attrs@attrs') e
 
-    (* [%client e ] with e = ... ~%x ...
-       [%eliom.fragment e]
-    *)
-    | {pexp_desc = Pexp_extension ({txt},PStr [{pstr_desc = Pstr_eval (frag_exp,attrs)}])},
-      `Server
-      when is_annotation txt ["client"] ->
-      let frag_exp = self#expression `Client frag_exp in
-      let s = {Location.loc ; txt = "eliom.fragment"} in
-      Exp.extension ~loc ~attrs (s, PStr [Str.eval ~loc frag_exp])
-
-    (* ~%( ... ) ] *)
-    | [%expr ~% [%e? inj ]], _ ->
-      begin match context with
-        | `Client ->
-          let context = `Injection in
-          make_inj ~loc @@ super#expression context inj
-        | `Fragment ->
-          let context = `Escaped_value in
-          make_inj ~loc @@ super#expression context inj
-        | `Server ->
-          exp_error ~loc "The syntax ~%% ... is not allowed inside server code."
-        | `Escaped_value | `Injection ->
-          exp_error ~loc "The syntax ~%% ... can not be nested."
-        | `Shared ->
-          assert false (* TODO *)
-      end
     | _ -> super#expression context expr
 
   (** Toplevel translation *)
@@ -180,12 +140,6 @@ let mapper = object (self)
           | _ ->
             c, [ str_error ~loc "Wrong payload for the %%%%%s extension." txt ]
         end
-      | Pstr_extension (({txt}, PStr strs), _)
-        when is_annotation txt ["shared"; "client" ;"server"] ->
-        (c, self#dispatch_str ~loc (Context.of_string txt) strs)
-      | Pstr_extension (({txt}, _), _)
-        when is_annotation txt ["shared"; "client" ;"server"] ->
-          c, [ str_error ~loc "Wrong payload for the %%%%%s extension." txt ]
       | _ ->
         (c, self#dispatch_str ~loc c [pstr])
     in
@@ -200,12 +154,6 @@ let mapper = object (self)
           c, [ sig_error ~loc
               "The %%%%%s extension doesn't accept arguments." txt ]
         else (Context.of_string txt, [])
-      | Psig_extension (({txt}, PSig sigs), _)
-        when is_annotation txt ["shared"; "client" ;"server"] ->
-        (c, self#dispatch_sig ~loc (Context.of_string txt) sigs)
-      | Psig_extension (({txt}, _), _)
-        when is_annotation txt ["shared"; "client" ;"server"] ->
-          c, [ sig_error ~loc "Wrong payload for the %%%%%s extension." txt ]
       | _ ->
         (c, self#dispatch_sig ~loc c [psig])
     in

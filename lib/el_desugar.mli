@@ -12,6 +12,6 @@ module Shared : sig
 
 end
 
-val mapper : Context.shared Ppx_core.Ast_traverse.map_with_context
+val mapper : Context.t Ppx_core.Ast_traverse.map_with_context
 
 val mapper' : string list -> Ast_mapper.mapper

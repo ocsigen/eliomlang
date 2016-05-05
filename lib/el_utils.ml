@@ -100,7 +100,7 @@ let is_annotation txt l =
 
 (** Internal attributes *)
 let eliom_section_attr = "eliom.section"
-let eliom_fragment_attr = "eliom.fragment"
+let eliom_fragment_attr = "eliom.client"
 
 (** Context convenience module. *)
 module Context = struct
@@ -112,22 +112,10 @@ module Context = struct
     else if f "eliom.client" s || f "eliom.client.start" s then `Client
     else invalid_arg "Eliom ppx: Not a context"
 
-  type escape_inject = [
-    | `Escaped_value
-    | `Injection
-  ]
-
   type t = [
     | `Server (* [%%server ... ] *)
     | `Client (* [%%client ... ] *)
-    | `Fragment (* [%client ... ] *)
-    | `Escaped_value (* [%shared ~%( ... ) ] *)
-    | `Injection (* [%%client ~%( ... ) ] *)
-  ]
-
-  type shared = [
     | `Shared
-    | t
   ]
 end
 
