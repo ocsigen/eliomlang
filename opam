@@ -20,4 +20,10 @@ install: ["ocaml" "setup.ml" "-install"]
 remove: ["ocamlfind" "remove" "eliom-lang"]
 depends: [
   "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "lwt"
+  "js_of_ocaml"
+  "ppx_tools"
+  "ppx_core"
 ]
+available: ocaml-version >= "4.03"
