@@ -10,6 +10,9 @@ BuildTools:  ocamlbuild
 AlphaFeatures: ocamlbuild_more_args, pure_interface
 OCamlVersion:     >= 4.03.0
 
+Flag runtime
+  Default: true
+
 ## Ppx libraries
 
 Library "eliom_typechecker"
@@ -64,6 +67,7 @@ Library "eliom_runtime_server"
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
   BuildDepends: re
+  Build$: flag(runtime)
 
 Library "eliom_runtime_client"
   FindlibContainers: eliom_lang.runtime
@@ -74,6 +78,7 @@ Library "eliom_runtime_client"
   InternalModules: Eliom_serial
   BuildDepends: js_of_ocaml, js_of_ocaml.ppx
   CompiledObject: byte
+  Build$: flag(runtime)
 
 Library "eliom_runtime_lwt"
   FindlibContainers: eliom_lang.runtime
@@ -82,6 +87,7 @@ Library "eliom_runtime_lwt"
   Path: runtime/lwt
   Modules: Eliom_lwt
   BuildDepends: eliom_lang.runtime.server, lwt
+  Build$: flag(runtime)
 
 # Document "eliom-lang"
 #   Type: ocamlbuild (0.3)
