@@ -12,16 +12,18 @@ OCamlVersion:     >= 4.03.0
 
 ## Ppx libraries
 
-Library "eliom_typing"
+Library "eliom_typechecker"
   Path: compiler
   Pack: true
-  Modules: typing/Annot, typing/Includemod, typing/Tast_mapper,
+  Modules:
+    typing/Eliom_base, typing/Eliom_types, typing/Eliom_typing,
+    typing/Annot, typing/Includemod, typing/Tast_mapper,
     typing/Btype, typing/Mtype, typing/Typeclass,
     typing/Cmi_format, typing/Oprint, typing/Typecore,
     typing/Cmt_format, typing/Outcometree, typing/Typedecl,
     typing/Ctype, typing/Parmatch, typing/TypedtreeIter,
     typing/Datarepr, typing/Path, typing/TypedtreeMap,
-    typing/Eliom_side, typing/Predef, typing/Typedtree,
+    typing/Predef, typing/Typedtree,
     typing/Envaux, typing/Primitive, typing/Typemod,
     typing/Env, typing/Printtyped, typing/Types,
     typing/Ident, typing/Printtyp, typing/Typetexp,
@@ -36,7 +38,7 @@ Library "eliom_lang_ppx"
   Modules: El_desugar, El_server, El_client, El_ppx, El_untype
   InternalModules: El_utils
   BuildDepends:
-    eliom_typing,
+    eliom_typechecker,
     ppx_tools, ppx_tools.metaquot, ppx_core
   Install: false
 

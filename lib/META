@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: c06ff45edd47f34ccff11b4a0729ce72)
+# DO NOT EDIT (digest: b8f4a961a8d16027f8d2563f78b746c1)
 version = "0.1.0"
 description = "Eliom-lang"
-requires = "eliom_typing ppx_tools ppx_tools.metaquot ppx_core"
+requires = "eliom_typechecker ppx_tools ppx_tools.metaquot ppx_core"
 archive(byte) = "eliom_lang_ppx.cma"
 archive(byte, plugin) = "eliom_lang_ppx.cma"
 archive(native) = "eliom_lang_ppx.cmxa"

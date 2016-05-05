@@ -49,7 +49,9 @@ let read_cmi filename =
     let buffer =
       really_input_string ic (String.length Config.cmi_magic_number)
     in
-    if buffer <> Config.cmi_magic_number then begin
+    if buffer <> Config.cmi_magic_number
+    && buffer <> Eliom_types.cmi_magic_number (* ELIOM *)
+    then begin
       close_in ic;
       let pre_len = String.length Config.cmi_magic_number - 3 in
       if String.sub buffer 0 pre_len
@@ -64,7 +66,22 @@ let read_cmi filename =
     end;
     let cmi = input_cmi ic in
     close_in ic;
+    (* ELIOM *)
+    let side =
+      if buffer = Eliom_types.cmi_magic_number then `Shared
+      else Eliom_base.get_side ()
+    in
+    (* We don't change sides inside the module if
+       - The module already has sides (ie. is an eliom cmi)
+       - The current side is Noside
+    *)
+    if buffer = Eliom_types.cmi_magic_number
+    || Eliom_base.get_side () = `Noside
+    then ()
+    else Eliom_types.translate cmi.cmi_sign ;
+    (* /ELIOM *)
     cmi
+    , side (* ELIOM *)
   with End_of_file | Failure _ ->
       close_in ic;
       raise(Error(Corrupted_interface(filename)))
@@ -74,7 +91,15 @@ let read_cmi filename =
 
 let output_cmi filename oc cmi =
 (* beware: the provided signature must have been substituted for saving *)
-  output_string oc Config.cmi_magic_number;
+  (* ELIOM *)
+  let cmi_magic_number =
+    if Eliom_types.is_mixed cmi.cmi_sign
+    then Eliom_types.cmi_magic_number
+    else
+      Config.cmi_magic_number
+  in
+  (* /ELIOM *)
+  output_string oc cmi_magic_number;
   output_value oc (cmi.cmi_name, cmi.cmi_sign);
   flush oc;
   let crc = Digest.file filename in

@@ -163,6 +163,19 @@ module EnvTbl =
     let keys tbl = Ident.fold_all (fun k _ accu -> k::accu) tbl []
   end
 
+(* ELIOM *)
+module STbl = struct
+  type 'a t = 'a Ident.tbl
+  let find = Ident.find_name
+  let find_same = Ident.find_same
+  let iter f = Ident.iter (fun i -> f @@ Ident.name i)
+  let fold f =
+    Ident.fold_all (fun i -> f @@ Ident.name i)
+  let add = Ident.add
+  let empty = Ident.empty
+end
+(* /ELIOM *)
+
 type type_descriptions =
     constructor_description list * label_description list
 
@@ -198,17 +211,17 @@ and module_components_repr =
   | Functor_comps of functor_components
 
 and structure_components = {
-  mutable comp_values: (string, (value_description * int)) Tbl.t;
-  mutable comp_constrs: (string, (constructor_description * int) list) Tbl.t;
-  mutable comp_labels: (string, (label_description * int) list) Tbl.t;
+  mutable comp_values: (value_description * int) STbl.t;
+  mutable comp_constrs: ((constructor_description * int) list) STbl.t;
+  mutable comp_labels: ((label_description * int) list) STbl.t;
   mutable comp_types:
-   (string, ((type_declaration * type_descriptions) * int)) Tbl.t;
+   ((type_declaration * type_descriptions) * int) STbl.t;
   mutable comp_modules:
-   (string, ((Subst.t * Types.module_type,module_type) EnvLazy.t * int)) Tbl.t;
-  mutable comp_modtypes: (string, (modtype_declaration * int)) Tbl.t;
-  mutable comp_components: (string, (module_components * int)) Tbl.t;
-  mutable comp_classes: (string, (class_declaration * int)) Tbl.t;
-  mutable comp_cltypes: (string, (class_type_declaration * int)) Tbl.t
+   ((Subst.t * Types.module_type,module_type) EnvLazy.t * int) STbl.t;
+  mutable comp_modtypes: (modtype_declaration * int) STbl.t;
+  mutable comp_components: (module_components * int) STbl.t;
+  mutable comp_classes: (class_declaration * int) STbl.t;
+  mutable comp_cltypes: (class_type_declaration * int) STbl.t
 }
 
 and functor_components = {
@@ -340,15 +353,15 @@ type pers_struct =
     ps_filename: string;
     ps_flags: pers_flags list }
 
+(* ELIOM *)
+(* Those idents are all persistent, but can contain different sides. *)
 let persistent_structures =
-  (Hashtbl.create 17 : (string, pers_struct option) Hashtbl.t)
+  (Hashtbl.create 17 : (Ident.t, pers_struct option) Hashtbl.t)
+(* /ELIOM *)
 
 (* Consistency between persistent structures *)
 
 let crc_units = Consistbl.create()
-
-module StringSet =
-  Set.Make(struct type t = string let compare = String.compare end)
 
 let imported_units = ref StringSet.empty
 
@@ -382,7 +395,8 @@ let check_consistency ps =
 
 let save_pers_struct crc ps =
   let modname = ps.ps_name in
-  Hashtbl.add persistent_structures modname (Some ps);
+  let id = Ident.create_persistent modname in (* ELIOM *)
+  Hashtbl.add persistent_structures id (Some ps);
   List.iter
     (function
         | Rectypes -> ()
@@ -391,62 +405,21 @@ let save_pers_struct crc ps =
     ps.ps_flags;
   Consistbl.set crc_units modname crc ps.ps_filename;
   add_import modname
-(* ELIOM *)
 
-module Trans_sig = struct
-
-  let it_ident i = Ident.change_side (Eliom_side.get_side ()) i
-  let it_path p = List.iter it_ident @@ Path.heads p
-  let it_do_type_expr it ty = match ty.desc with
-      Tconstr (p, tyl, abbrev) ->
-        it.it_path p ;
-        List.iter (it.it_type_expr it) tyl ;
-        iter_abbrev (it.it_type_expr it) !abbrev
-    | Tpackage (p, _, tyl) ->
-        it.it_path p ;
-        List.iter (it.it_type_expr it) tyl
-    | Tobject (ty, {contents}) ->
-        it.it_type_expr it ty ;
-        may (fun (p,tyl) ->
-          it.it_path p ;
-          List.iter (it.it_type_expr it) tyl
-        ) contents
-    | Tvariant row ->
-        may (fun (p,_) -> it.it_path p) (row_repr row).row_name
-    | Tlink _ ->
-        it.it_type_expr it ty
-    | Tpoly (ty,tyl) ->
-        List.iter (it.it_type_expr it) (ty::tyl)
-    | Ttuple tyl ->
-        List.iter (it.it_type_expr it) tyl
-    | Tfield (_,_,ty,ty')
-    | Tarrow (_,ty,ty',_) ->
-        it.it_type_expr it ty ;
-        it.it_type_expr it ty'
-    | Tnil
-    | Tsubst _
-    | Tvar _
-    | Tunivar _ ->
-        ()
-
-  let it =
-    { type_iterators with
-      it_path ; it_ident ; it_do_type_expr ;
-    }
-
-  let signature s =
-    if Eliom_side.get_side () = `Shared then ()
-    else it.it_signature it s
-
-end
-(* /ELIOM *)
-
-let read_pers_struct check modname filename =
+let read_pers_struct check id filename =
+  let modname = Ident.name id in (* ELIOM *)
   add_import modname;
-  let cmi = read_cmi filename in
+  let cmi, side(*ELIOM*) = read_cmi filename in
+  (* ELIOM *)
+  if side <> Ident.side id then begin
+    Format.eprintf "Changing side of %a to %a.@."
+      Ident.print id Eliom_base.pp side ;
+    Ident.change_side side id ;
+    Format.eprintf "Now is %a.@." Ident.print id ;
+  end ;
+  (* /ELIOM *)
   let name = cmi.cmi_name in
   let sign = cmi.cmi_sign in
-  (* ELIOM *) Trans_sig.signature sign ;
   let crcs = cmi.cmi_crcs in
   let flags = cmi.cmi_flags in
   let deprecated =
@@ -455,7 +428,7 @@ let read_pers_struct check modname filename =
   in
   let comps =
       !components_of_module' ~deprecated empty Subst.identity
-                             (Pident(Ident.create_persistent name))
+                             (Pident id)
                              (Mty_signature sign)
   in
   let ps = { ps_name = name;
@@ -476,35 +449,33 @@ let read_pers_struct check modname filename =
         | Opaque -> add_imported_opaque modname)
     ps.ps_flags;
   if check then check_consistency ps;
-  Hashtbl.add persistent_structures modname (Some ps);
+  Hashtbl.add persistent_structures id (Some ps);
   ps
 
-let find_pers_struct check name =
+let find_pers_struct check id =
+  let name = Ident.name id in
   if name = "*predef*" then raise Not_found;
-  match Hashtbl.find persistent_structures name with
+  match Hashtbl.find persistent_structures id with
   | Some ps -> ps
   | None -> raise Not_found
   | exception Not_found ->
       (* ELIOM *)
       let filename, side =
         try
-          let l = !load_path in
-          find_in_path_uncap l (name ^ ".cmi"), `Shared
-        with Not_found -> try
-            let l = Eliom_side.get_load_path () in
-            let side = Eliom_side.get_side () in
-            find_in_path_uncap l (name ^ ".cmi"), side
-          with Not_found ->
-            Hashtbl.add persistent_structures name None;
-            raise Not_found
+          let _ = load_path in (* Avoid touching "open Config". *)
+          Eliom_base.find_in_load_path (name ^ ".cmi")
+        with Not_found ->
+          Hashtbl.add persistent_structures id None;
+          raise Not_found
       in
-      Eliom_side.in_side side @@ fun () ->
-      read_pers_struct check name filename
+      Eliom_base.in_side side @@ fun () ->
+      read_pers_struct check id filename
 
 (* Emits a warning if there is no valid cmi for name *)
-let check_pers_struct name =
+let check_pers_struct id =
+  let name = Ident.name id in
   try
-    ignore (find_pers_struct false name)
+    ignore (find_pers_struct false id)
   with
   | Not_found ->
       let warn = Warnings.No_cmi_file(name, None) in
@@ -543,7 +514,7 @@ let check_pers_struct name =
     (* PR#6843: record the weak dependency ([add_import]) regardless of
        whether the check suceeds, to help make builds more
        deterministic. *)
-    add_import name;
+    add_import @@ Ident.name name;
     if (Warnings.is_active (Warnings.No_cmi_file("", None))) then
       !add_delayed_check_forward
         (fun () -> check_pers_struct name)
@@ -589,15 +560,13 @@ let rec find_module_descr path env =
       with Not_found ->
         if Ident.persistent id && not (Ident.name id = !current_unit)
         then
-          (* ELIOM *)
-          Eliom_side.in_side (Ident.side id) @@ fun () ->
-          (find_pers_struct (Ident.name id)).ps_comps
+          (find_pers_struct id(* ELIOM *)).ps_comps
         else raise Not_found
       end
   | Pdot(p, s, pos) ->
       begin match get_components (find_module_descr p env) with
         Structure_comps c ->
-          let (descr, pos) = Tbl.find s c.comp_components in
+          let (descr, pos) = STbl.find s c.comp_components in
           descr
       | Functor_comps f ->
          raise Not_found
@@ -618,7 +587,7 @@ let find proj1 proj2 path env =
   | Pdot(p, s, pos) ->
       begin match get_components (find_module_descr p env) with
         Structure_comps c ->
-          let (data, pos) = Tbl.find s (proj2 c) in data
+          let (data, pos) = STbl.find s (proj2 c) in data
       | Functor_comps f ->
           raise Not_found
       end
@@ -674,7 +643,7 @@ let find_type_full path env =
       let exts =
         List.filter
           (function ({cstr_tag=Cstr_extension _}, _) -> true | _ -> false)
-          (try Tbl.find s comps.comp_constrs
+          (try STbl.find s comps.comp_constrs
            with Not_found -> assert false)
       in
       match exts with
@@ -694,16 +663,14 @@ let find_module ~alias path env =
         in data
       with Not_found ->
         if Ident.persistent id && not (Ident.name id = !current_unit) then
-          (* ELIOM *)
-          Eliom_side.in_side (Ident.side id) @@ fun () ->
-          let ps = find_pers_struct (Ident.name id) in
+          let ps = find_pers_struct id(* ELIOM *) in
           md (Mty_signature(Lazy.force ps.ps_sig))
         else raise Not_found
       end
   | Pdot(p, s, pos) ->
       begin match get_components (find_module_descr p env) with
         Structure_comps c ->
-          let (data, pos) = Tbl.find s c.comp_modules in
+          let (data, pos) = STbl.find s c.comp_modules in
           md (EnvLazy.force subst_modtype_maker data)
       | Functor_comps f ->
           raise Not_found
@@ -842,14 +809,18 @@ let rec lookup_module_descr_aux ?loc lid env =
         EnvTbl.find_name s env.components
       with Not_found ->
         if s = !current_unit then raise Not_found;
-        let ps = find_pers_struct s in
-        (Pident(Ident.create_persistent s), ps.ps_comps)
+        (* ELIOM *)
+        (* We create the id and pass it to find_pers_struct to find its side
+           Before returning it. *)
+        let id = Ident.create_persistent s in
+        let ps = find_pers_struct id in
+        (Pident id, ps.ps_comps)
       end
   | Ldot(l, s) ->
       let (p, descr) = lookup_module_descr ?loc l env in
       begin match get_components descr with
         Structure_comps c ->
-          let (descr, pos) = Tbl.find s c.comp_components in
+          let (descr, pos) = STbl.find s c.comp_components in
           (Pdot(p, s, pos), descr)
       | Functor_comps f ->
           raise Not_found
@@ -887,10 +858,14 @@ and lookup_module ~load ?loc lid env : Path.t =
         p
       with Not_found ->
         if s = !current_unit then raise Not_found;
-        let p = Pident(Ident.create_persistent s) in
-        if !Clflags.transparent_modules && not load then check_pers_struct s
+        (* ELIOM *)
+        (* We create the id and pass it to find_pers_struct to find its side
+           Before returning it. *)
+        let id = Ident.create_persistent s in
+        let p = Pident id in
+        if !Clflags.transparent_modules && not load then check_pers_struct id
         else begin
-          let ps = find_pers_struct s in
+          let ps = find_pers_struct id in
           report_deprecated ?loc p ps.ps_comps.deprecated
         end;
         p
@@ -899,8 +874,8 @@ and lookup_module ~load ?loc lid env : Path.t =
       let (p, descr) = lookup_module_descr ?loc l env in
       begin match get_components descr with
         Structure_comps c ->
-          let (data, pos) = Tbl.find s c.comp_modules in
-          let (comps, _) = Tbl.find s c.comp_components in
+          let (data, pos) = STbl.find s c.comp_modules in
+          let (comps, _) = STbl.find s c.comp_components in
           let p = Pdot(p, s, pos) in
           report_deprecated ?loc p comps.deprecated;
           p
@@ -928,7 +903,7 @@ let lookup proj1 proj2 ?loc lid env =
       let (p, desc) = lookup_module_descr ?loc l env in
       begin match get_components desc with
         Structure_comps c ->
-          let (data, pos) = Tbl.find s (proj2 c) in
+          let (data, pos) = STbl.find s (proj2 c) in
           (Pdot(p, s, pos), data)
       | Functor_comps f ->
           raise Not_found
@@ -953,7 +928,7 @@ let lookup_all_simple proj1 proj2 shadow ?loc lid env =
       begin match get_components desc with
         Structure_comps c ->
           let comps =
-            try Tbl.find s (proj2 c) with Not_found -> []
+            try STbl.find s (proj2 c) with Not_found -> []
           in
           List.map
             (fun (data, pos) -> (data, (fun () -> ())))
@@ -1149,7 +1124,7 @@ let rec scrape_alias_for_visit env mty =
   match mty with
   | Mty_alias (Pident id)
     when Ident.persistent id
-      && not (Hashtbl.mem persistent_structures (Ident.name id)) -> false
+      && not (Hashtbl.mem persistent_structures id) -> false
   | Mty_alias path -> (* PR#6600: find_module may raise Not_found *)
       begin try scrape_alias_for_visit env (find_module path env).md_type
       with Not_found -> false
@@ -1168,10 +1143,10 @@ let iter_env proj1 proj2 f env () =
       if not visit then () else
       match get_components mcomps with
         Structure_comps comps ->
-          Tbl.iter
+          STbl.iter
             (fun s (d, n) -> f (Pdot (path, s, n)) (Pdot (path', s, n), d))
             (proj2 comps);
-          Tbl.iter
+          STbl.iter
             (fun s (c, n) ->
               iter_components (Pdot (path, s, n)) (Pdot (path', s, n)) c)
             comps.comp_components
@@ -1179,10 +1154,10 @@ let iter_env proj1 proj2 f env () =
     in iter_env_cont := (path, cont) :: !iter_env_cont
   in
   Hashtbl.iter
-    (fun s pso ->
+    (fun id pso ->
       match pso with None -> ()
       | Some ps ->
-          let id = Pident (Ident.create_persistent s) in
+          let id = Pident id in
           iter_components id id ps.ps_comps)
     persistent_structures;
   Ident.iter
@@ -1203,7 +1178,7 @@ let same_types env1 env2 =
 
 let used_persistent () =
   let r = ref Concr.empty in
-  Hashtbl.iter (fun s pso -> if pso != None then r := Concr.add s !r)
+  Hashtbl.iter (fun s pso -> if pso != None then r := Concr.add (Ident.name s) !r)
     persistent_structures;
   !r
 
@@ -1211,7 +1186,7 @@ let find_all_comps proj s (p,mcomps) =
   match get_components mcomps with
     Functor_comps _ -> []
   | Structure_comps comps ->
-      try let (c,n) = Tbl.find s (proj comps) in [Pdot(p,s,n), c]
+      try let (c,n) = STbl.find s (proj comps) in [Pdot(p,s,n), c]
       with Not_found -> []
 
 let rec find_shadowed_comps path env =
@@ -1382,8 +1357,12 @@ let prefix_idents_and_subst root sub sg =
   let (pl, sub) = prefix_idents root 0 sub sg in
   pl, sub, lazy (subst_signature sub sg)
 
+let set_nongen_level sub path =
+  Subst.set_nongen_level sub (Path.binding_time path)
+
 let prefix_idents_and_subst root sub sg =
-  if sub = Subst.identity then
+  let sub = set_nongen_level sub root in
+  if sub = set_nongen_level Subst.identity root then
     let sgs =
       try
         Hashtbl.find prefixed_sg root
@@ -1405,8 +1384,8 @@ let prefix_idents_and_subst root sub sg =
 
 let add_to_tbl id decl tbl =
   let decls =
-    try Tbl.find id tbl with Not_found -> [] in
-  Tbl.add id (decl :: decls) tbl
+    try STbl.find_same id tbl with Not_found -> [] in
+  STbl.add id (decl :: decls) tbl
 
 let rec components_of_module ~deprecated env sub path mty =
   {
@@ -1418,12 +1397,12 @@ and components_of_module_maker (env, sub, path, mty) =
   (match scrape_alias env mty with
     Mty_signature sg ->
       let c =
-        { comp_values = Tbl.empty;
-          comp_constrs = Tbl.empty;
-          comp_labels = Tbl.empty; comp_types = Tbl.empty;
-          comp_modules = Tbl.empty; comp_modtypes = Tbl.empty;
-          comp_components = Tbl.empty; comp_classes = Tbl.empty;
-          comp_cltypes = Tbl.empty } in
+        { comp_values = STbl.empty;
+          comp_constrs = STbl.empty;
+          comp_labels = STbl.empty; comp_types = STbl.empty;
+          comp_modules = STbl.empty; comp_modtypes = STbl.empty;
+          comp_components = STbl.empty; comp_classes = STbl.empty;
+          comp_cltypes = STbl.empty } in
       let pl, sub, _ = prefix_idents_and_subst path sub sg in
       let env = ref env in
       let pos = ref 0 in
@@ -1432,7 +1411,7 @@ and components_of_module_maker (env, sub, path, mty) =
           Sig_value(id, decl) ->
             let decl' = Subst.value_description sub decl in
             c.comp_values <-
-              Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
+              STbl.add id (decl', !pos) c.comp_values;
             begin match decl.val_kind with
               Val_prim _ -> () | _ -> incr pos
             end
@@ -1443,53 +1422,59 @@ and components_of_module_maker (env, sub, path, mty) =
             let labels =
               List.map snd (Datarepr.labels_of_type path decl') in
             c.comp_types <-
-              Tbl.add (Ident.name id)
+              STbl.add id
                 ((decl', (constructors, labels)), nopos)
                   c.comp_types;
             List.iter
               (fun descr ->
                 c.comp_constrs <-
-                  add_to_tbl descr.cstr_name (descr, nopos) c.comp_constrs)
+                  (* ELIOM *)
+                  let cid = Ident.create_persistent ~side:(Ident.side id) descr.cstr_name in
+                  (* /ELIOM *)
+                  add_to_tbl cid (descr, nopos) c.comp_constrs)
               constructors;
             List.iter
               (fun descr ->
                 c.comp_labels <-
-                  add_to_tbl descr.lbl_name (descr, nopos) c.comp_labels)
+                  (* ELIOM *)
+                  let cid = Ident.create_persistent ~side:(Ident.side id) descr.lbl_name in
+                  (* /ELIOM *)
+                  add_to_tbl cid (descr, nopos) c.comp_labels)
               labels;
             env := store_type_infos None id (Pident id) decl !env !env
         | Sig_typext(id, ext, _) ->
             let ext' = Subst.extension_constructor sub ext in
             let descr = Datarepr.extension_descr path ext' in
             c.comp_constrs <-
-              add_to_tbl (Ident.name id) (descr, !pos) c.comp_constrs;
+              add_to_tbl id (descr, !pos) c.comp_constrs;
             incr pos
         | Sig_module(id, md, _) ->
             let mty = md.md_type in
             let mty' = EnvLazy.create (sub, mty) in
             c.comp_modules <-
-              Tbl.add (Ident.name id) (mty', !pos) c.comp_modules;
+              STbl.add id (mty', !pos) c.comp_modules;
             let deprecated =
               Builtin_attributes.deprecated_of_attrs md.md_attributes
             in
             let comps = components_of_module ~deprecated !env sub path mty in
             c.comp_components <-
-              Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
+              STbl.add id (comps, !pos) c.comp_components;
             env := store_module None id (Pident id) md !env !env;
             incr pos
         | Sig_modtype(id, decl) ->
             let decl' = Subst.modtype_declaration sub decl in
             c.comp_modtypes <-
-              Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
+              STbl.add id (decl', nopos) c.comp_modtypes;
             env := store_modtype None id (Pident id) decl !env !env
         | Sig_class(id, decl, _) ->
             let decl' = Subst.class_declaration sub decl in
             c.comp_classes <-
-              Tbl.add (Ident.name id) (decl', !pos) c.comp_classes;
+              STbl.add id (decl', !pos) c.comp_classes;
             incr pos
         | Sig_class_type(id, decl, _) ->
             let decl' = Subst.cltype_declaration sub decl in
             c.comp_cltypes <-
-              Tbl.add (Ident.name id) (decl', !pos) c.comp_cltypes)
+              STbl.add id (decl', !pos) c.comp_cltypes)
         sg pl;
         Structure_comps c
   | Mty_functor(param, ty_arg, ty_res) ->
@@ -1498,19 +1483,19 @@ and components_of_module_maker (env, sub, path, mty) =
           (* fcomp_arg and fcomp_res must be prefixed eagerly, because
              they are interpreted in the outer environment *)
           fcomp_arg = may_map (Subst.modtype sub) ty_arg;
-          fcomp_res = Subst.modtype sub ty_res;
+          fcomp_res = Subst.modtype (set_nongen_level sub path) ty_res;
           fcomp_cache = Hashtbl.create 17;
           fcomp_subst_cache = Hashtbl.create 17 }
   | Mty_ident _
   | Mty_alias _ ->
         Structure_comps {
-          comp_values = Tbl.empty;
-          comp_constrs = Tbl.empty;
-          comp_labels = Tbl.empty;
-          comp_types = Tbl.empty;
-          comp_modules = Tbl.empty; comp_modtypes = Tbl.empty;
-          comp_components = Tbl.empty; comp_classes = Tbl.empty;
-          comp_cltypes = Tbl.empty })
+          comp_values = STbl.empty;
+          comp_constrs = STbl.empty;
+          comp_labels = STbl.empty;
+          comp_types = STbl.empty;
+          comp_modules = STbl.empty; comp_modtypes = STbl.empty;
+          comp_components = STbl.empty; comp_classes = STbl.empty;
+          comp_cltypes = STbl.empty })
 
 (* Insertion of bindings by identifier + path *)
 
@@ -1802,8 +1787,9 @@ let open_signature slot root sg env0 =
 (* Open a signature from a file *)
 
 let open_pers_signature name env =
-  let ps = find_pers_struct name in
-  open_signature None (Pident(Ident.create_persistent name))
+  let id = Ident.create_persistent name in
+  let ps = find_pers_struct id in
+  open_signature None (Pident id)
     (Lazy.force ps.ps_sig) env
 
 let open_signature ?(loc = Location.none) ?(toplevel = false) ovf root sg env =
@@ -1841,13 +1827,15 @@ let open_signature ?(loc = Location.none) ?(toplevel = false) ovf root sg env =
 (* Read a signature from a file *)
 
 let read_signature modname filename =
-  let ps = read_pers_struct modname filename in
+  let id = Ident.create_persistent modname in
+  let ps = read_pers_struct id filename in
   Lazy.force ps.ps_sig
 
 (* Return the CRC of the interface of the given compilation unit *)
 
 let crc_of_unit name =
-  let ps = find_pers_struct name in
+  let id = Ident.create_persistent name in
+  let ps = find_pers_struct id in
   let crco =
     try
       List.assoc name ps.ps_crcs
@@ -1927,7 +1915,7 @@ let find_all proj1 proj2 f lid env acc =
       let p, desc = lookup_module_descr l env in
       begin match get_components desc with
           Structure_comps c ->
-            Tbl.fold
+            STbl.fold
               (fun s (data, pos) acc -> f s (Pdot (p, s, pos)) data acc)
               (proj2 c) acc
         | Functor_comps _ ->
@@ -1944,7 +1932,7 @@ let find_all_simple_list proj1 proj2 f lid env acc =
       let p, desc = lookup_module_descr l env in
       begin match get_components desc with
           Structure_comps c ->
-            Tbl.fold
+            STbl.fold
               (fun s comps acc ->
                 match comps with
                   [] -> acc
@@ -1965,11 +1953,11 @@ let fold_modules f lid env acc =
           acc
       in
       Hashtbl.fold
-        (fun name ps acc ->
+        (fun id ps acc ->
           match ps with
               None -> acc
             | Some ps ->
-              f name (Pident(Ident.create_persistent name))
+              f (Ident.name id) (Pident id)
                      (md (Mty_signature (Lazy.force ps.ps_sig))) acc)
         persistent_structures
         acc
@@ -1977,7 +1965,7 @@ let fold_modules f lid env acc =
       let p, desc = lookup_module_descr l env in
       begin match get_components desc with
           Structure_comps c ->
-            Tbl.fold
+            STbl.fold
               (fun s (data, pos) acc ->
                 f s (Pdot (p, s, pos))
                     (md (EnvLazy.force subst_modtype_maker data)) acc)

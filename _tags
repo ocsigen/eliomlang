@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 800032f79321731c32ebe117bf05ba70)
+# DO NOT EDIT (digest: f84876c9e89115f0e41eff39c1dabbcf)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,44 +14,46 @@ true: annot, bin_annot
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
-# Library eliom_typing
-"compiler/eliom_typing.cmxs": use_eliom_typing
-"compiler/typing/annot.cmx": for-pack(Eliom_typing)
-"compiler/typing/includemod.cmx": for-pack(Eliom_typing)
-"compiler/typing/tast_mapper.cmx": for-pack(Eliom_typing)
-"compiler/typing/btype.cmx": for-pack(Eliom_typing)
-"compiler/typing/mtype.cmx": for-pack(Eliom_typing)
-"compiler/typing/typeclass.cmx": for-pack(Eliom_typing)
-"compiler/typing/cmi_format.cmx": for-pack(Eliom_typing)
-"compiler/typing/oprint.cmx": for-pack(Eliom_typing)
-"compiler/typing/typecore.cmx": for-pack(Eliom_typing)
-"compiler/typing/cmt_format.cmx": for-pack(Eliom_typing)
-"compiler/typing/outcometree.cmx": for-pack(Eliom_typing)
-"compiler/typing/typedecl.cmx": for-pack(Eliom_typing)
-"compiler/typing/ctype.cmx": for-pack(Eliom_typing)
-"compiler/typing/parmatch.cmx": for-pack(Eliom_typing)
-"compiler/typing/typedtreeIter.cmx": for-pack(Eliom_typing)
-"compiler/typing/datarepr.cmx": for-pack(Eliom_typing)
-"compiler/typing/path.cmx": for-pack(Eliom_typing)
-"compiler/typing/typedtreeMap.cmx": for-pack(Eliom_typing)
-"compiler/typing/eliom_side.cmx": for-pack(Eliom_typing)
-"compiler/typing/predef.cmx": for-pack(Eliom_typing)
-"compiler/typing/typedtree.cmx": for-pack(Eliom_typing)
-"compiler/typing/envaux.cmx": for-pack(Eliom_typing)
-"compiler/typing/primitive.cmx": for-pack(Eliom_typing)
-"compiler/typing/typemod.cmx": for-pack(Eliom_typing)
-"compiler/typing/env.cmx": for-pack(Eliom_typing)
-"compiler/typing/printtyped.cmx": for-pack(Eliom_typing)
-"compiler/typing/types.cmx": for-pack(Eliom_typing)
-"compiler/typing/ident.cmx": for-pack(Eliom_typing)
-"compiler/typing/printtyp.cmx": for-pack(Eliom_typing)
-"compiler/typing/typetexp.cmx": for-pack(Eliom_typing)
-"compiler/typing/includeclass.cmx": for-pack(Eliom_typing)
-"compiler/typing/stypes.cmx": for-pack(Eliom_typing)
-"compiler/typing/untypeast.cmx": for-pack(Eliom_typing)
-"compiler/typing/includecore.cmx": for-pack(Eliom_typing)
-"compiler/typing/subst.cmx": for-pack(Eliom_typing)
-"compiler/driver/compmisc.cmx": for-pack(Eliom_typing)
+# Library eliom_typechecker
+"compiler/eliom_typechecker.cmxs": use_eliom_typechecker
+"compiler/typing/eliom_base.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/eliom_types.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/eliom_typing.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/annot.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/includemod.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/tast_mapper.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/btype.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/mtype.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typeclass.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/cmi_format.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/oprint.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typecore.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/cmt_format.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/outcometree.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typedecl.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/ctype.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/parmatch.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typedtreeIter.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/datarepr.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/path.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typedtreeMap.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/predef.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typedtree.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/envaux.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/primitive.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typemod.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/env.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/printtyped.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/types.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/ident.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/printtyp.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/typetexp.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/includeclass.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/stypes.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/untypeast.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/includecore.cmx": for-pack(Eliom_typechecker)
+"compiler/typing/subst.cmx": for-pack(Eliom_typechecker)
+"compiler/driver/compmisc.cmx": for-pack(Eliom_typechecker)
 <compiler/*.ml{,i,y}>: package(compiler-libs.common)
 <compiler/driver/*.ml{,i,y}>: package(compiler-libs.common)
 <compiler/typing/*.ml{,i,y}>: package(compiler-libs.common)
@@ -61,27 +63,7 @@ true: annot, bin_annot
 <lib/*.ml{,i,y}>: package(ppx_core)
 <lib/*.ml{,i,y}>: package(ppx_tools)
 <lib/*.ml{,i,y}>: package(ppx_tools.metaquot)
-<lib/*.ml{,i,y}>: use_eliom_typing
-# Executable eliom_ppx
-"bin/eliom_ppx.byte": package(compiler-libs.common)
-"bin/eliom_ppx.byte": package(ppx_core)
-"bin/eliom_ppx.byte": package(ppx_tools)
-"bin/eliom_ppx.byte": package(ppx_tools.metaquot)
-"bin/eliom_ppx.byte": use_eliom_lang_ppx
-"bin/eliom_ppx.byte": use_eliom_typing
-# Executable eliom_desugar
-"bin/eliom_desugar.byte": package(compiler-libs.common)
-"bin/eliom_desugar.byte": package(ppx_core)
-"bin/eliom_desugar.byte": package(ppx_tools)
-"bin/eliom_desugar.byte": package(ppx_tools.metaquot)
-"bin/eliom_desugar.byte": use_eliom_lang_ppx
-"bin/eliom_desugar.byte": use_eliom_typing
-<bin/*.ml{,i,y}>: package(compiler-libs.common)
-<bin/*.ml{,i,y}>: package(ppx_core)
-<bin/*.ml{,i,y}>: package(ppx_tools)
-<bin/*.ml{,i,y}>: package(ppx_tools.metaquot)
-<bin/*.ml{,i,y}>: use_eliom_lang_ppx
-<bin/*.ml{,i,y}>: use_eliom_typing
+<lib/*.ml{,i,y}>: use_eliom_typechecker
 # Library eliom_runtime_server
 "runtime/server/eliom_runtime_server.cmxs": use_eliom_runtime_server
 <runtime/server/*.ml{,i,y}>: package(re)
@@ -109,4 +91,4 @@ true: bin_annot
 true: keep_locs
 
 # We use the local typechecker in priority.
-<lib/**>: open(Eliom_typing)
+<lib/**> or <bin/**>: open(Eliom_typechecker)

@@ -49,60 +49,6 @@ exception Error_forward of Location.error
 
 open Typedtree
 
-(* ELIOM *)
-let add_mod_attr attr = function
-  | Tstr_eval (e, attrs) -> Tstr_eval (e, attr::attrs)
-  | Tstr_primitive x ->
-      Tstr_primitive {x with val_attributes = attr :: x.val_attributes}
-  | Tstr_value (rc,x) ->
-      Tstr_value (rc,List.map
-          (fun x -> {x with vb_attributes = attr :: x.vb_attributes}) x)
-  | Tstr_type (r,l) ->
-      Tstr_type (r,List.map
-          (fun x -> {x with typ_attributes = attr :: x.typ_attributes}) l)
-  | Tstr_typext tex ->
-      Tstr_typext {tex with tyext_attributes = attr :: tex.tyext_attributes}
-  | Tstr_exception exn ->
-      Tstr_exception {exn with ext_attributes = attr :: exn.ext_attributes}
-  | Tstr_module mb ->
-      Tstr_module {mb with mb_attributes = attr :: mb.mb_attributes}
-  | Tstr_recmodule rmb ->
-      Tstr_recmodule (List.map
-          (fun mb -> {mb with mb_attributes = attr :: mb.mb_attributes}) rmb)
-  | Tstr_modtype mt ->
-      Tstr_modtype {mt with mtd_attributes = attr :: mt.mtd_attributes}
-  | Tstr_open op ->
-      Tstr_open {op with open_attributes = attr :: op.open_attributes}
-  | Tstr_include ic ->
-      Tstr_include {ic with incl_attributes = attr :: ic.incl_attributes}
-  | Tstr_class cls ->
-      Tstr_class (List.map
-          (fun (cl,s) -> {cl with ci_attributes = attr :: cl.ci_attributes}, s) cls)
-  | Tstr_class_type clt ->
-      Tstr_class_type (List.map
-          (fun (id,s,cl) -> id,s,{cl with ci_attributes = attr :: cl.ci_attributes})
-            clt)
-  | Tstr_attribute at ->
-      Tstr_attribute at
-
-let add_tsigi_attr attr = function
-  | Sig_value (id,vd) ->
-      Sig_value (id,{vd with val_attributes = attr :: vd.val_attributes})
-  | Sig_type (id,td,rc) ->
-      Sig_type (id,{td with type_attributes = attr :: td.type_attributes},rc)
-  | Sig_typext (id,ec,es) ->
-      Sig_typext (id,{ec with ext_attributes = attr :: ec.ext_attributes},es)
-  | Sig_module (ed,md,rs) ->
-      Sig_module (ed,{md with md_attributes = attr :: md.md_attributes},rs)
-  | Sig_modtype (id,mtd) ->
-      Sig_modtype (id,{mtd with mtd_attributes = attr :: mtd.mtd_attributes})
-  | Sig_class (id,cd,rs) ->
-      Sig_class (id,{cd with cty_attributes = attr :: cd.cty_attributes},rs)
-  | Sig_class_type (id,ctd,rs) ->
-      Sig_class_type (id,{ctd with clty_attributes = attr :: ctd.clty_attributes},rs)
-
-(* /ELIOM *)
-
 let fst3 (x,_,_) = x
 
 let rec path_concat head p =
@@ -490,28 +436,39 @@ let check_recmod_typedecls env sdecls decls =
 
 (* Auxiliaries for checking uniqueness of names in signatures and structures *)
 
-module StringSet =
-  Set.Make(struct type t = string let compare (x:t) y = compare x y end)
+(* ELIOM *)
+module SideSet = Set.Make(struct
+    type t = Eliom_base.shside * string
+    let compare (s1,name1) (s2,name2) =
+      match s1, s2 with
+      | _,_ when s1 = s2 -> compare name1 name2
+      | `Noside, _ | _, `Noside
+      | `Shared, _ | _, `Shared -> compare name1 name2
+      | _ -> compare s1 s2
+    let equal = (=)
+  end)
+(* /ELIOM *)
 
 let check cl loc set_ref name =
-  if StringSet.mem name !set_ref
+  let side = Eliom_base.get_side () in (* ELIOM *)
+  if SideSet.mem (side, name) !set_ref
   then raise(Error(loc, Env.empty, Repeated_name(cl, name)))
-  else set_ref := StringSet.add name !set_ref
+  else set_ref := SideSet.add (side, name) !set_ref
 
 type names =
   {
-    types: StringSet.t ref;
-    modules: StringSet.t ref;
-    modtypes: StringSet.t ref;
-    typexts: StringSet.t ref;
+    types: SideSet.t ref; (* ELIOM *)
+    modules: SideSet.t ref; (* ELIOM *)
+    modtypes: SideSet.t ref; (* ELIOM *)
+    typexts: SideSet.t ref; (* ELIOM *)
   }
 
 let new_names () =
   {
-    types = ref StringSet.empty;
-    modules = ref StringSet.empty;
-    modtypes = ref StringSet.empty;
-    typexts = ref StringSet.empty;
+    types = ref SideSet.empty; (* ELIOM *)
+    modules = ref SideSet.empty; (* ELIOM *)
+    modtypes = ref SideSet.empty; (* ELIOM *)
+    typexts = ref SideSet.empty; (* ELIOM *)
   }
 
 
@@ -631,6 +588,19 @@ and transl_signature env sg =
     | item :: srem ->
         let loc = item.psig_loc in
         match item.psig_desc with
+        (* ELIOM *)
+        | _ when Eliom_base.Section.check_sig item ->
+            let side, sign = Eliom_base.Section.get_sig item in
+            let attr = Eliom_base.Section.attr side loc in
+            let tsigi, sigi, newenv =
+              Eliom_base.in_side side @@ fun () ->
+              transl_sig env sign
+            in
+            let trem, rem, finalenv = transl_sig newenv srem in
+            (List.map (Eliom_typing.Tast.add_tsigi_attr attr) tsigi)@trem,
+            sigi@rem,
+            finalenv
+        (* /ELIOM *)
         | Psig_value sdesc ->
             let (tdesc, newenv) =
               Builtin_attributes.with_warning_attribute sdesc.pval_attributes
@@ -1261,15 +1231,20 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
 and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
   let names = new_names () in
 
+  (* ELIOM *)
+  let sstr = Eliom_base.Section.split sstr in
+  (* /ELIOM *)
+
   let rec type_str_item env srem ({pstr_loc = loc; pstr_desc = desc} as stri) =
     match desc with
     (* ELIOM *)
-    | _ when Eliom_side.is_section stri ->
-        let side, stri = Eliom_side.get_section stri in
-        let attr = Eliom_side.section_attr side loc in
-        Eliom_side.in_side side @@ fun () ->
+    | _ when Eliom_base.Section.check stri ->
+        let side, stri = Eliom_base.Section.get stri in
+        let attr = Eliom_base.Section.attr side loc in
+        Eliom_base.in_side side @@ fun () ->
         let tmod, tsig, env = type_str_item env srem stri in
-        add_mod_attr attr tmod, List.map (add_tsigi_attr attr) tsig, env
+        let open Eliom_typing.Tast in
+        add_stri_attr attr tmod, List.map (add_sigi_attr attr) tsig, env
     (* /ELIOM *)
     | Pstr_eval (sexpr, attrs) ->
         let expr =
@@ -1348,6 +1323,12 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
             md_loc = pmb_loc;
           }
         in
+        (* ELIOM *)
+        Includemod.Side.module_binding
+          {mb_id=id; mb_name=name; mb_expr=modl;
+           mb_attributes=attrs;  mb_loc=pmb_loc;
+          } ;
+        (* /ELIOM *)
         let newenv = Env.enter_module_declaration id md env in
         Tstr_module {mb_id=id; mb_name=name; mb_expr=modl;
                      mb_attributes=attrs;  mb_loc=pmb_loc;
@@ -1653,8 +1634,9 @@ let type_implementation sourcefile outputprefix modulename initial_env ast =
     if Sys.file_exists sourceintf then begin
       let intf_file =
         try
-          let l = Eliom_side.get_load_path () in
-          find_in_path_uncap l (modulename ^ ".cmi")
+          (* ELIOM *)
+          fst @@ Eliom_base.find_in_load_path (modulename ^ ".cmi")
+          (* /ELIOM *)
         with Not_found ->
           raise(Error(Location.in_file sourcefile, Env.empty,
                       Interface_not_compiled sourceintf)) in

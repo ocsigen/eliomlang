@@ -1,5 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: e07ed0c6e358c2c54c128b20b58a1be4)
+# DO NOT EDIT (digest: 81744dc2e5dd512617c665c767b6496c)
+typing/Eliom_base
+typing/Eliom_types
+typing/Eliom_typing
 typing/Annot
 typing/Includemod
 typing/Tast_mapper
@@ -18,7 +21,6 @@ typing/TypedtreeIter
 typing/Datarepr
 typing/Path
 typing/TypedtreeMap
-typing/Eliom_side
 typing/Predef
 typing/Typedtree
 typing/Envaux

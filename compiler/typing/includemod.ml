@@ -40,6 +40,10 @@ type symptom =
   | Unbound_modtype_path of Path.t
   | Unbound_module_path of Path.t
   | Invalid_module_alias of Path.t
+  (* ELIOM *)
+  | Wrong_side of Ident.t * Location.t * string * (Ident.t * Location.t) list
+  | Side_inclusion of Ident.t * Location.t * string * Location.t * Eliom_base.shside
+  (* /ELIOM *)
 
 type pos =
     Module of Ident.t | Modtype of Ident.t | Arg of Ident.t | Body of Ident.t
@@ -160,6 +164,34 @@ let is_runtime_component = function
   | Sig_typext(_,_,_)
   | Sig_module(_,_,_)
   | Sig_class(_, _,_) -> true
+
+(* ELIOM *)
+module Tbl = struct
+  module M = Map.Make(struct
+      type t = field_desc * Eliom_base.shside
+      let equal = (=)
+      let compare = compare
+    end)
+  let empty = M.empty
+  let add k ((id, _, _) as v) tbl =
+    let side = Ident.side id in
+    M.add (k, side) v tbl
+  let find side k tbl =
+    try M.find (k, side) tbl with
+    | Not_found when side = `Client || side = `Server ->
+        (* A shared declaration can be exposed as client or server. *)
+        M.find (k, `Shared) tbl
+    | exn -> raise exn
+  let find_all key tbl =
+    M.fold
+      (fun (k,_) (id,sigi,_) l ->
+         if k = key then
+           let (id, loc, _) = item_ident_name sigi in
+           (id, loc)::l
+         else l)
+      tbl []
+end
+(* /ELIOM *)
 
 (* Print a coercion *)
 
@@ -340,7 +372,8 @@ and signatures env cxt subst sig1 sig2 =
           | _ -> name2, true
         in
         begin try
-          let (id1, item1, pos1) = Tbl.find name2 comps1 in
+          let side2 = Ident.side id2 in (* ELIOM *)
+          let (id1, item1, pos1) = Tbl.find side2 name2 comps1 in
           let new_subst =
             match item2 with
               Sig_type _ ->
@@ -358,6 +391,13 @@ and signatures env cxt subst sig1 sig2 =
         with Not_found ->
           let unpaired =
             if report then
+              (* ELIOM *)
+              match Tbl.find_all name2 comps1 with
+              | (_::_) as l ->
+                (cxt, env, Wrong_side (id2, loc, kind_of_field_desc name2, l))
+                :: unpaired
+              | [] ->
+              (* /ELIOM *)
               (cxt, env, Missing_field (id2, loc, kind_of_field_desc name2)) ::
               unpaired
             else unpaired in
@@ -469,6 +509,73 @@ let modtypes env m1 m2 =
   c
 *)
 
+(* ELIOM *)
+(* Ensure proper inclusion of side, in order to prevent such code:
+
+    {|
+    module%client M = struct
+      let%server x = 3
+    end
+    |}
+*)
+module Side = struct
+
+  exception Side_error of Ident.t * Location.t * string
+
+  (** Contrary to Eliom_base.conform, this allows client/server inside shared
+      (and disallow the reverse).
+  *)
+  let check_inclusion ~scope ~decl = match scope, decl with
+    | `Shared, _
+    | `Server, `Server
+    | `Client, `Client
+    | _, `Noside
+      -> true
+    | _, `Shared
+    | `Client, `Server
+    | `Server, `Client
+    | `Noside, _
+      -> false
+
+  let check scope (id, loc, fdesc) =
+    if not @@ check_inclusion ~scope ~decl:(Ident.side id) then
+      let kind = kind_of_field_desc fdesc in
+      raise (Side_error (id, loc, kind))
+    else ()
+
+  let signature_item scope sigi =
+    check scope @@ item_ident_name sigi
+  let signature scope s = List.iter (signature_item scope) s
+
+  let rec module_type env side mty =
+    match mty with
+    | Mty_signature s -> signature side s
+    | Mty_ident p ->
+        module_type env side @@ expand_module_path env [] p
+    | Mty_alias p ->
+        module_type env side @@ expand_module_alias env [] p
+    | Mty_functor (id, None, mty) -> module_type env side mty
+    | Mty_functor (id, Some arg, mty) ->
+        module_type env side arg ;
+        module_type env side mty
+
+  let module_expr { mod_loc ; mod_type ; mod_env } =
+    let side = Eliom_base.get_side () in
+    try module_type mod_env side mod_type
+    with Side_error (id, loc, kind) ->
+      let err =  Side_inclusion (id, loc, kind, mod_loc, side) in
+      raise (Error [[], mod_env, err])
+
+  let module_binding { mb_id ; mb_loc ; mb_expr = { mod_type ; mod_env } } =
+    let side = Ident.side mb_id in
+    try module_type mod_env side mod_type
+    with Side_error (id, loc, kind) ->
+      let err =  Side_inclusion (id, loc, kind, mb_loc, side) in
+      raise (Error [[], mod_env, err])
+
+end
+(* /ELIOM *)
+
 (* Error report *)
 
 open Format
@@ -545,6 +652,30 @@ let include_err ppf = function
       fprintf ppf "Unbound module %a" Printtyp.path path
   | Invalid_module_alias path ->
       fprintf ppf "Module %a cannot be aliased" Printtyp.path path
+  (* ELIOM *)
+  | Wrong_side (id, loc, kind, other_decl) ->
+      let side = Ident.side id in
+      let pp ppf (x, loc) = Eliom_base.pp ppf (Ident.side x) in
+      let ppl ppf = function
+        | [] -> ()
+        | [ x ] -> fprintf ppf "%a side" pp x
+        | l -> fprintf ppf "sides:@ %a" (pp_print_list pp) l
+      in
+      fprintf ppf
+        "@[<hv 2>The %s `%a' is expected of side %a but is only available on %a@]"
+        kind ident id   Eliom_base.pp side  ppl other_decl
+      ;
+      show_loc "Expected declaration" ppf loc ;
+      List.iter (fun (_,loc) -> show_loc "Actual declaration" ppf loc) other_decl
+  | Side_inclusion (id, loc, kind, modloc, scope) ->
+      fprintf ppf
+        "@[<hv 2>The %s `%s' is declared on \
+         %a side but was expected on %a side@]"
+        kind  (Ident.name id)
+        Eliom_base.pp (Ident.side id)  Eliom_base.pp scope ;
+      show_loc "Actual declaration" ppf loc ;
+      show_loc "Module definition" ppf modloc
+  (* /ELIOM *)
 
 let rec context ppf = function
     Module id :: rem ->

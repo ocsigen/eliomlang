@@ -11,3 +11,4 @@ fi
 mkdir -p typing driver
 cp $OCAMLSRC/typing/*.ml* typing
 cp $OCAMLSRC/driver/compmisc.ml* driver/
+cp $OCAMLSRC/driver/*compile.ml* driver/

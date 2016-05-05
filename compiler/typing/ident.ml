@@ -28,31 +28,35 @@ let side i =
   let s = (i.flags land server_flag) <> 0 in
   let c = (i.flags land client_flag) <> 0 in
   match s, c with
-  | false, false -> `Shared
+  | false, false -> `Noside
   | true , false -> `Server
   | false, true  -> `Client
-  (* This case should probably raise an error *)
   | true , true  -> `Shared
+
+let invert = function
+  | `Client -> `Server
+  | `Server -> `Client
+  | `Shared -> `Noside
+  | `Noside -> `Shared
 
 let side_to_flag = function
   | `Server -> server_flag
   | `Client -> client_flag
-  | `Shared -> 0
+  | `Shared -> server_flag lor client_flag
+  | `Noside -> 0
 
 let show_side i = match side i with
-  | `Client -> "c"
-  | `Server -> "s"
-  | `Shared -> ""
+  | `Client -> "@c"
+  | `Server -> "@s"
+  | `Shared -> "@sh"
+  | `Noside -> ""
 
 let change_side s i =
-  if side i = `Shared then
-    match s with
-    | `Shared -> ()
-    | `Client | `Server ->
-        i.flags <-
-          i.flags
-          lor (side_to_flag s)
-          land (lnot @@ side_to_flag @@ Eliom_side.mirror s)
+  i.flags <-
+    i.flags
+    (* Take care of removing the symmetric, if necessary. *)
+    land (lnot @@ side_to_flag @@ invert s)
+    lor (side_to_flag s)
 
 (* /ELIOM *)
 
@@ -60,15 +64,15 @@ let change_side s i =
 
 let currentstamp = ref 0
 
-let create ?(side=Eliom_side.get_side ()) s =
+let create ?(side=Eliom_base.get_side ()) s =
   incr currentstamp;
   { name = s; stamp = !currentstamp; flags = side_to_flag side }
 
-let create_predef_exn ?(side=Eliom_side.get_side ()) s =
+let create_predef_exn ?(side=Eliom_base.get_side ()) s =
   incr currentstamp;
   { name = s; stamp = !currentstamp; flags = predef_exn_flag lor side_to_flag side}
 
-let create_persistent ?(side=Eliom_side.get_side ()) s =
+let create_persistent ?(side=Eliom_base.get_side ()) s =
   { name = s; stamp = 0; flags = global_flag lor side_to_flag side }
 
 let rename i =
@@ -124,8 +128,8 @@ let is_predef_exn i =
 
 let print ppf i =
   match i.stamp with
-  | 0 -> fprintf ppf "%s!" i.name
-  | -1 -> fprintf ppf "%s#" i.name
+  | 0 -> fprintf ppf "%s!%s" i.name (show_side i)
+  | -1 -> fprintf ppf "%s#%s" i.name (show_side i)
   | n -> fprintf ppf "%s/%i%s%s" i.name n (if global i then "g" else "") (show_side i)
 
 type 'a tbl =
@@ -209,7 +213,7 @@ let rec find_name_side s = function
     None ->
       raise Not_found
   | Some k ->
-      if Eliom_side.conform s (side k.ident)
+      if Eliom_base.conform s (side k.ident)
       then k.data
       else find_name_side s k.previous
 
@@ -219,20 +223,20 @@ let rec find_side name s = function
   | Node(l, k, r, _) ->
       let c = compare name k.ident.name in
       if c = 0 then
-        if Eliom_side.conform s (side k.ident)
+        if Eliom_base.conform s (side k.ident)
         then k.data
         else find_name_side s k.previous
       else
         find_side name s (if c < 0 then l else r)
 
-let find_name name = find_side name (Eliom_side.get_side ())
+let find_name name = find_side name (Eliom_base.get_side ())
 
 let rec get_all s = function
   | None -> []
   | Some k -> cons_ident s k
 
 and cons_ident s k =
-  if Eliom_side.conform s (side k.ident)
+  if Eliom_base.conform s (side k.ident)
   then k.data :: get_all s k.previous
   else get_all s k.previous
 
@@ -243,7 +247,7 @@ let rec find_all name = function
   | Node(l, k, r, _) ->
       let c = compare name k.ident.name in
       if c = 0 then
-        cons_ident (Eliom_side.get_side ()) k
+        cons_ident (Eliom_base.get_side ()) k
       else
         find_all name (if c < 0 then l else r)
 

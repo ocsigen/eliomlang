@@ -23,92 +23,6 @@ open Typedtree
 open Btype
 open Ctype
 
-(* ELIOM *)
-(* Utilities *)
-let mk_texp ~env ?(attrs=[]) ?(loc=Location.none) desc ty =
-  { exp_desc = desc; exp_type = ty;
-    exp_loc  = loc; exp_extra = [];
-    exp_attributes = attrs;
-    exp_env  = env }
-
-let texp_ident env name =
-  let lid     = Longident.parse name in
-  let (p, vd) = try Env.lookup_value lid env
-                with Not_found ->
-                  Misc.fatal_error ("Trx.find_value: " ^ name) in
-  mk_texp ~env (Texp_ident (p,mknoloc lid, vd))
-          (Ctype.instance env vd.val_type)
-
-let texp_apply : Typedtree.expression -> Typedtree.expression list ->
- Typedtree.expression_desc = fun f args ->
-   Texp_apply(f, List.map (fun arg -> (Nolabel,Some arg)) args)
-
-let rec longident_of_path = function
-  | Path.Pident id ->
-      Longident.Lident (Ident.name id)
-  | Path.Pdot (p,s,i) ->
-      Longident.Ldot (longident_of_path p, s)
-  | Path.Papply (p1,p2) ->
-      Longident.Lapply (longident_of_path p1, longident_of_path p2)
-
-exception No_translation of Path.t
-let translate_path f p =
-  let lid = longident_of_path p in
-  let new_p, _ =
-    try f lid
-    with Not_found -> raise (No_translation p)
-  in
-  new_p
-
-let rec translate_side_expr f expr = match expr.desc with
-  | Tconstr (p,args,_abbrev) ->
-      let desc = Tconstr
-        (f p,
-         List.map (translate_side_expr f) args,
-         ref Mnil)
-      in
-      {expr with desc}
-
-  | Tlink t -> translate_side_expr f t
-
-  | Tpackage (p,n,l) ->
-      let desc = Tpackage (
-          f p,
-          n, List.map (translate_side_expr f) l)
-      in
-      {expr with desc}
-
-  (* Must return the original expression, to preserve sharing *)
-  | Tvar _
-  | Tunivar _ -> expr
-
-  (* For all the following, we just copy. *)
-  | Tvariant _
-  | Tpoly (_,_)
-  | Ttuple _
-
-  (* Technically, those can't be serialized. *)
-  | Tarrow (_,_,_,_)
-  | Tobject (_,_)
-  | Tfield (_,_,_,_)
-  | Tnil
-
-  (* Shouldn't happen, but not important. *)
-  | Tsubst _
-
-    as ty ->
-    {expr with
-     desc = copy_type_desc ~keep_names:true (translate_side_expr f) ty
-    }
-
-let translate_side env side expr =
-  Eliom_side.in_side side @@ fun () ->
-  let f = translate_path (fun id -> Env.lookup_type id env) in
-  try `Ok (translate_side_expr f expr)
-  with No_translation p -> `Error p
-
-(* /ELIOM *)
-
 type error =
     Polymorphic_label of Longident.t
   | Constructor_arity_mismatch of Longident.t * int * int
@@ -157,6 +71,7 @@ type error =
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
+  | Inlined_record_expected
   | Unrefuted_pattern of pattern
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
@@ -206,11 +121,6 @@ let rp node =
 ;;
 
 
-let is_recarg d =
-  match (repr d.val_type).desc with
-  | Tconstr(p, _, _) -> Path.is_constructor_typath p
-  | _ -> false
-
 type recarg =
   | Allowed
   | Required
@@ -227,12 +137,14 @@ let iter_expression f e =
   let rec expr e =
     f e;
     match e.pexp_desc with
-    (*** ELIOM ***)
-    | _ when Eliom_side.is_fragment e ->
-        Eliom_side.in_side `Client @@ fun () ->
-        f @@ Eliom_side.get_fragment e
-    | _ when Eliom_side.is_injection e -> ()
-    (*** /ELIOM ***)
+    (* ELIOM *)
+    | _ when Eliom_base.Fragment.check e ->
+        Eliom_base.in_side `Client @@ fun () ->
+        f @@ Eliom_base.Fragment.get e
+    | _ when Eliom_base.Injection.check e ->
+        Eliom_base.in_side `Server @@ fun () ->
+        f @@ Eliom_base.Injection.get e
+    (* /ELIOM *)
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _
     | Pexp_new _
@@ -291,9 +203,9 @@ let iter_expression f e =
   and structure_item str =
     match str.pstr_desc with
     (* ELIOM *)
-    | _ when Eliom_side.is_section str ->
-        let side, str = Eliom_side.get_section str in
-        Eliom_side.in_side side @@ fun () -> structure_item str
+    | _ when Eliom_base.Section.check str ->
+        let side, str = Eliom_base.Section.get str in
+        Eliom_base.in_side side @@ fun () -> structure_item str
     (* /ELIOM *)
     | Pstr_eval (e, _) -> expr e
     | Pstr_value (_, pel) -> List.iter binding pel
@@ -1259,10 +1171,10 @@ let rec type_pat ~constrs ~labels ~no_existentials ~mode ~explode ~env
       let (ty_args, ty_res) =
         instance_constructor ~in_pattern:(env, get_newtype_level ()) constr
       in
-      if constr.cstr_generalized && mode <> Inside_or then
-        unify_pat_types_gadt loc env ty_res expected_ty
-      else
-        unify_pat_types loc !env ty_res expected_ty;
+      (* PR#7214: do not use gadt unification for toplevel lets *)
+      if not constr.cstr_generalized || mode = Inside_or || no_existentials
+      then unify_pat_types loc !env ty_res expected_ty
+      else unify_pat_types_gadt loc env ty_res expected_ty;
 
       let rec check_non_escaping p =
         match p.ppat_desc with
@@ -2011,7 +1923,7 @@ and type_injection env e ty_expected =
   let loc = e.pexp_loc in
   let typ_exp =
     begin_def () ;
-    Eliom_side.in_side `Server @@ fun () ->
+    Eliom_base.in_side `Server @@ fun () ->
     let t = type_exp env e in
     end_def () ;
     t
@@ -2033,14 +1945,14 @@ and type_injection env e ty_expected =
   | _ ->
       generalize ty_injected ;
       if closed_schema env ty_injected then
-        match translate_side env `Client ty_injected with
-        | `Ok found_ty ->
+        match Eliom_typing.translate env `Client ty_injected with
+        | Ok found_ty ->
             (* Format.printf "Translation found: %a@." *)
             (*   Printtyp.raw_type_expr found_ty ; *)
             let ty = instance env found_ty in
             unify_exp_types loc env ty ty_expected ;
             typ_exp
-        | `Error path ->
+        | Error path ->
             errorf ty_injected
               "The type %a has no server translation, \
                it cannot be used in an injection."
@@ -2076,18 +1988,18 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
   in
   match sexp.pexp_desc with
   (* ELIOM *)
-  | _ when Eliom_side.is_fragment sexp ->
+  | _ when Eliom_base.Fragment.check sexp ->
       (* Check that we are indeed on the server. *)
-      Eliom_side.check ~loc (fun e -> Error_forward e)
+      Eliom_base.check ~loc (fun e -> Error_forward e)
         `Server "Fragments" ;
       (* Follow Pexp_lazy *)
-      let e = Eliom_side.get_fragment sexp in
-      let ty = Eliom_side.in_side `Client @@ fun () -> newgenvar () in
+      let e = Eliom_base.Fragment.get sexp in
+      let ty = Eliom_base.in_side `Client @@ fun () -> newgenvar () in
       let to_unify = Predef.type_fragment ty in
-      Eliom_side.in_side `Client @@ fun () ->
+      Eliom_base.in_side `Client @@ fun () ->
       unify_exp_types loc env to_unify ty_expected;
       let new_exp =
-        Eliom_side.in_side `Client @@ fun () ->
+        Eliom_base.in_side `Client @@ fun () ->
         type_expect env e ty
       in
       re {
@@ -2095,22 +2007,22 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
         exp_loc = loc;
         exp_type = instance env ty_expected;
         exp_attributes =
-          Eliom_side.fragment_attr loc :: sexp.pexp_attributes @
+          Eliom_base.Fragment.attr loc :: sexp.pexp_attributes @
             new_exp.exp_attributes ;
         exp_env = env;
       }
-  | _ when Eliom_side.is_injection sexp ->
+  | _ when Eliom_base.Injection.check sexp ->
       (* Check that we are indeed on the client. *)
-      Eliom_side.check ~loc (fun e -> Error_forward e)
+      Eliom_base.check ~loc (fun e -> Error_forward e)
         `Client "Injections" ;
-      let e = Eliom_side.get_injection sexp in
+      let e = Eliom_base.Injection.get sexp in
       let new_exp = type_injection env e ty_expected in
       re {
         new_exp with
         exp_loc = loc;
         exp_type = instance env ty_expected;
         exp_attributes =
-          Eliom_side.injection_attr loc :: sexp.pexp_attributes @
+          Eliom_base.Injection.attr loc :: sexp.pexp_attributes @
             new_exp.exp_attributes ;
         exp_env = env;
       }
@@ -2127,10 +2039,22 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
           let name = Path.name ~paren:Oprint.parenthesized_ident path in
           Stypes.record (Stypes.An_ident (loc, name, annot))
         end;
-        begin match is_recarg desc, recarg with
-        | _, Allowed | true, Required | false, Rejected -> ()
-        | true, Rejected | false, Required ->
-            raise (Error (loc, env, Inlined_record_escape));
+        let is_recarg =
+          match (repr desc.val_type).desc with
+          | Tconstr(p, _, _) -> Path.is_constructor_typath p
+          | _ -> false
+        in
+
+        begin match is_recarg, recarg, (repr desc.val_type).desc with
+        | _, Allowed, _
+        | true, Required, _
+        | false, Rejected, _
+          -> ()
+        | true, Rejected, _
+        | false, Required, (Tvar _ | Tconstr _) ->
+            raise (Error (loc, env, Inlined_record_escape))
+        | false, Required, _  ->
+            () (* will fail later *)
         end;
         rue {
           exp_desc =
@@ -2606,8 +2530,9 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
           (Texp_constraint cty, loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
   | Pexp_coerce(sarg, sty, sty') ->
-      (* Could be always true, only 1% slowdown for lablgtk *)
-      let separate = !Clflags.principal || Env.has_local_constraints env in
+      let separate = true in (* always separate, 1% slowdown for lablgtk *)
+      (* Also see PR#7199 for a problem with the following:
+         let separate = !Clflags.principal || Env.has_local_constraints env in*)
       let (arg, ty',cty,cty') =
         match sty with
         | None ->
@@ -2898,6 +2823,9 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
       Ident.set_current_time ty.level;
       let context = Typetexp.narrow () in
       let modl = !type_module env smodl in
+      (* ELIOM *)
+      Includemod.Side.module_expr modl ;
+      (* /ELIOM *)
       let (id, new_env) = Env.enter_module name.txt modl.mod_type env in
       Ctype.init_def(Ident.current_time());
       Typetexp.widen context;
@@ -3063,6 +2991,9 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
             raise (Error (loc, env, Not_a_packed_module ty_expected))
       in
       let (modl, tl') = !type_package env m p nl tl in
+      (* ELIOM *)
+      Includemod.Side.module_expr modl ;
+      (* /ELIOM *)
       rue {
         exp_desc = Texp_pack modl;
         exp_loc = loc; exp_extra = [];
@@ -3835,7 +3766,7 @@ and type_construct env loc lid sarg ty_expected attrs =
               Pexp_record (_, (Some {pexp_desc = Pexp_ident _}| None))}] ->
             Required
         | _ ->
-            raise (Error(loc, env, Inlined_record_escape))
+            raise (Error(loc, env, Inlined_record_expected))
         end
   in
   let args =
@@ -4195,9 +4126,14 @@ and type_let ?(check = fun s -> Warnings.Unused_var s)
       spat_sexp_list pat_slot_list in
   current_slot := None;
   if is_recursive && not !rec_needed
-  && Warnings.is_active Warnings.Unused_rec_flag then
-    Location.prerr_warning (List.hd spat_sexp_list).pvb_pat.ppat_loc
-      Warnings.Unused_rec_flag;
+  && Warnings.is_active Warnings.Unused_rec_flag then begin
+    let {pvb_pat; pvb_attributes} = List.hd spat_sexp_list in
+    (* See PR#6677 *)
+    Builtin_attributes.with_warning_attribute pvb_attributes
+      (fun () ->
+         Location.prerr_warning pvb_pat.ppat_loc Warnings.Unused_rec_flag
+      )
+  end;
   List.iter2
     (fun pat exp ->
       ignore(check_partial env pat.pat_type pat.pat_loc [case pat exp]))
@@ -4495,6 +4431,9 @@ let report_error env ppf = function
       fprintf ppf
         "@[This form is not allowed as the type of the inlined record could \
          escape.@]"
+  | Inlined_record_expected ->
+      fprintf ppf
+        "@[This constructor expects an inlined record argument.@]"
   | Unrefuted_pattern pat ->
       fprintf ppf
         "@[%s@ %s@ %a@]"
