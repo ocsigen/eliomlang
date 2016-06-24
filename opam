@@ -1,13 +1,13 @@
 opam-version: "1.2"
-name:         "eliom-lang"
+name:         "eliomlang"
 maintainer:   "Gabriel Radanne <drupyog@zoho.com>"
 authors:      [ "Gabriel Radanne" ]
-homepage:     "https://github.com/Drup/eliom-lang"
-bug-reports:  "https://github.com/Drup/eliom-lang/issues"
-dev-repo:     "https://github.com/Drup/eliom-lang.git"
+homepage:     "https://github.com/ocsigen/eliomlang"
+bug-reports:  "https://github.com/ocsigen/eliomlang/issues"
+dev-repo:     "https://github.com/ocsigen/eliomlang.git"
 license:      "ISC"
 version: "dev"
-tags: [ ]
+tags: [ ocsigen eliom web ]
 build: [
   ["ocaml" "setup.ml" "-configure"
     "--enable-tests" {test}

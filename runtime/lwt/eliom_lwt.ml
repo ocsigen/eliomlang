@@ -8,8 +8,10 @@ let flush () = match Lwt.get hook with
     let v = !x in x := [] ; v
   | None ->
     (* "flush" is only called by serial, which should only be called at the
-       end of a request handling. Hence this should never happen. *)
-    assert false
+       end of a request handling. Hence this should never happen.
+       Just in case, we return the empty list.
+    *)
+    []
 
 let add frag =
   match Lwt.get hook with

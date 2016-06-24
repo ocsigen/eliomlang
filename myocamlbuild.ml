@@ -1,20 +1,13 @@
 [@@@ocaml.warning "-3"]
 (* OASIS_START *)
-(* DO NOT EDIT (digest: efdba37dcaac45b021ee0657562f31bc) *)
+(* DO NOT EDIT (digest: aedb2a561da8e558f1c44a9297994755) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
 
-  let ns_ str =
-    str
-
-
-  let s_ str =
-    str
-
-
-  let f_ (str: ('a, 'b, 'c, 'd) format4) =
-    str
+  let ns_ str = str
+  let s_ str = str
+  let f_ (str: ('a, 'b, 'c, 'd) format4) = str
 
 
   let fn_ fmt1 fmt2 n =
@@ -24,9 +17,166 @@ module OASISGettext = struct
       fmt2^^""
 
 
-  let init =
-    []
+  let init = []
+end
 
+module OASISString = struct
+(* # 22 "src/oasis/OASISString.ml" *)
+
+
+  (** Various string utilities.
+
+      Mostly inspired by extlib and batteries ExtString and BatString libraries.
+
+      @author Sylvain Le Gall
+  *)
+
+
+  let nsplitf str f =
+    if str = "" then
+      []
+    else
+      let buf = Buffer.create 13 in
+      let lst = ref [] in
+      let push () =
+        lst := Buffer.contents buf :: !lst;
+        Buffer.clear buf
+      in
+      let str_len = String.length str in
+      for i = 0 to str_len - 1 do
+        if f str.[i] then
+          push ()
+        else
+          Buffer.add_char buf str.[i]
+      done;
+      push ();
+      List.rev !lst
+
+
+  (** [nsplit c s] Split the string [s] at char [c]. It doesn't include the
+      separator.
+  *)
+  let nsplit str c =
+    nsplitf str ((=) c)
+
+
+  let find ~what ?(offset=0) str =
+    let what_idx = ref 0 in
+    let str_idx = ref offset in
+    while !str_idx < String.length str &&
+          !what_idx < String.length what do
+      if str.[!str_idx] = what.[!what_idx] then
+        incr what_idx
+      else
+        what_idx := 0;
+      incr str_idx
+    done;
+    if !what_idx <> String.length what then
+      raise Not_found
+    else
+      !str_idx - !what_idx
+
+
+  let sub_start str len =
+    let str_len = String.length str in
+    if len >= str_len then
+      ""
+    else
+      String.sub str len (str_len - len)
+
+
+  let sub_end ?(offset=0) str len =
+    let str_len = String.length str in
+    if len >= str_len then
+      ""
+    else
+      String.sub str 0 (str_len - len)
+
+
+  let starts_with ~what ?(offset=0) str =
+    let what_idx = ref 0 in
+    let str_idx = ref offset in
+    let ok = ref true in
+    while !ok &&
+          !str_idx < String.length str &&
+          !what_idx < String.length what do
+      if str.[!str_idx] = what.[!what_idx] then
+        incr what_idx
+      else
+        ok := false;
+      incr str_idx
+    done;
+    if !what_idx = String.length what then
+      true
+    else
+      false
+
+
+  let strip_starts_with ~what str =
+    if starts_with ~what str then
+      sub_start str (String.length what)
+    else
+      raise Not_found
+
+
+  let ends_with ~what ?(offset=0) str =
+    let what_idx = ref ((String.length what) - 1) in
+    let str_idx = ref ((String.length str) - 1) in
+    let ok = ref true in
+    while !ok &&
+          offset <= !str_idx &&
+          0 <= !what_idx do
+      if str.[!str_idx] = what.[!what_idx] then
+        decr what_idx
+      else
+        ok := false;
+      decr str_idx
+    done;
+    if !what_idx = -1 then
+      true
+    else
+      false
+
+
+  let strip_ends_with ~what str =
+    if ends_with ~what str then
+      sub_end str (String.length what)
+    else
+      raise Not_found
+
+
+  let replace_chars f s =
+    let buf = Buffer.create (String.length s) in
+    String.iter (fun c -> Buffer.add_char buf (f c)) s;
+    Buffer.contents buf
+
+  let lowercase_ascii =
+    replace_chars
+      (fun c ->
+         if (c >= 'A' && c <= 'Z') then
+           Char.chr (Char.code c + 32)
+         else
+           c)
+
+  let uncapitalize_ascii s =
+    if s <> "" then
+      (lowercase_ascii (String.sub s 0 1)) ^ (String.sub s 1 ((String.length s) - 1))
+    else
+      s
+
+  let uppercase_ascii =
+    replace_chars
+      (fun c ->
+         if (c >= 'a' && c <= 'z') then
+           Char.chr (Char.code c - 32)
+         else
+           c)
+
+  let capitalize_ascii s =
+    if s <> "" then
+      (uppercase_ascii (String.sub s 0 1)) ^ (String.sub s 1 ((String.length s) - 1))
+    else
+      s
 
 end
 
@@ -34,15 +184,10 @@ module OASISExpr = struct
 (* # 22 "src/oasis/OASISExpr.ml" *)
 
 
-
-
-
   open OASISGettext
 
 
   type test = string
-
-
   type flag = string
 
 
@@ -53,7 +198,6 @@ module OASISExpr = struct
     | EOr of t * t
     | EFlag of flag
     | ETest of test * string
-
 
 
   type 'a choices = (t * 'a) list
@@ -130,7 +274,7 @@ module OASISExpr = struct
 end
 
 
-# 132 "myocamlbuild.ml"
+# 276 "myocamlbuild.ml"
 module BaseEnvLight = struct
 (* # 22 "src/base/BaseEnvLight.ml" *)
 
@@ -172,23 +316,23 @@ module BaseEnvLight = struct
         let rec read_file mp =
           match Stream.npeek 3 lexer with
             | [Genlex.Ident nm; Genlex.Kwd "="; Genlex.String value] ->
-                Stream.junk lexer;
-                Stream.junk lexer;
-                Stream.junk lexer;
-                read_file (MapString.add nm value mp)
+              Stream.junk lexer;
+              Stream.junk lexer;
+              Stream.junk lexer;
+              read_file (MapString.add nm value mp)
             | [] ->
-                mp
+              mp
             | _ ->
-                failwith
-                  (Printf.sprintf
-                     "Malformed data file '%s' line %d"
-                     filename !line)
+              failwith
+                (Printf.sprintf
+                   "Malformed data file '%s' line %d"
+                   filename !line)
         in
         let mp =
           read_file MapString.empty
         in
-          close_in chn;
-          mp
+        close_in chn;
+        mp
       end
     else if allow_empty then
       begin
@@ -207,19 +351,19 @@ module BaseEnvLight = struct
     let buff =
       Buffer.create ((String.length str) * 2)
     in
-      Buffer.add_substitute
-        buff
-        (fun var ->
-           try
-             var_expand (MapString.find var env) env
-           with Not_found ->
-             failwith
-               (Printf.sprintf
-                  "No variable %s defined when trying to expand %S."
-                  var
-                  str))
-        str;
-      Buffer.contents buff
+    Buffer.add_substitute
+      buff
+      (fun var ->
+         try
+           var_expand (MapString.find var env) env
+         with Not_found ->
+           failwith
+             (Printf.sprintf
+                "No variable %s defined when trying to expand %S."
+                var
+                str))
+      str;
+    Buffer.contents buff
 
 
   let var_get name env =
@@ -233,19 +377,19 @@ module BaseEnvLight = struct
 end
 
 
-# 235 "myocamlbuild.ml"
+# 379 "myocamlbuild.ml"
 module MyOCamlbuildFindlib = struct
 (* # 22 "src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml" *)
 
 
   (** OCamlbuild extension, copied from
-    * http://brion.inria.fr/gallium/index.php/Using_ocamlfind_with_ocamlbuild
+    * https://ocaml.org/learn/tutorials/ocamlbuild/Using_ocamlfind_with_ocamlbuild.html
     * by N. Pouillard and others
     *
-    * Updated on 2009/02/28
+    * Updated on 2016-06-02
     *
     * Modified by Sylvain Le Gall
-    *)
+  *)
   open Ocamlbuild_plugin
 
   type conf =
@@ -276,7 +420,7 @@ module MyOCamlbuildFindlib = struct
       if Sys.os_type = "Win32" then begin
         let buff = Buffer.create (String.length str) in
         (* Adapt for windowsi, ocamlbuild + win32 has a hard time to handle '\\'.
-         *)
+        *)
         String.iter
           (fun c -> Buffer.add_char buff (if c = '\\' then '/' else c))
           str;
@@ -285,7 +429,7 @@ module MyOCamlbuildFindlib = struct
         str
       end
     in
-      fix_win32 exec
+    fix_win32 exec
 
   let split s ch =
     let buf = Buffer.create 13 in
@@ -294,15 +438,15 @@ module MyOCamlbuildFindlib = struct
       x := (Buffer.contents buf) :: !x;
       Buffer.clear buf
     in
-      String.iter
-        (fun c ->
-           if c = ch then
-             flush ()
-           else
-             Buffer.add_char buf c)
-        s;
-      flush ();
-      List.rev !x
+    String.iter
+      (fun c ->
+         if c = ch then
+           flush ()
+         else
+           Buffer.add_char buf c)
+      s;
+    flush ();
+    List.rev !x
 
 
   let split_nl s = split s '\n'
@@ -344,89 +488,89 @@ module MyOCamlbuildFindlib = struct
   let dispatch conf =
     function
       | After_options ->
-          (* By using Before_options one let command line options have an higher
-           * priority on the contrary using After_options will guarantee to have
-           * the higher priority override default commands by ocamlfind ones *)
-          Options.ocamlc     := ocamlfind & A"ocamlc";
-          Options.ocamlopt   := ocamlfind & A"ocamlopt";
-          Options.ocamldep   := ocamlfind & A"ocamldep";
-          Options.ocamldoc   := ocamlfind & A"ocamldoc";
-          Options.ocamlmktop := ocamlfind & A"ocamlmktop";
-          Options.ocamlmklib := ocamlfind & A"ocamlmklib"
+        (* By using Before_options one let command line options have an higher
+         * priority on the contrary using After_options will guarantee to have
+         * the higher priority override default commands by ocamlfind ones *)
+        Options.ocamlc     := ocamlfind & A"ocamlc";
+        Options.ocamlopt   := ocamlfind & A"ocamlopt";
+        Options.ocamldep   := ocamlfind & A"ocamldep";
+        Options.ocamldoc   := ocamlfind & A"ocamldoc";
+        Options.ocamlmktop := ocamlfind & A"ocamlmktop";
+        Options.ocamlmklib := ocamlfind & A"ocamlmklib"
 
       | After_rules ->
 
-          (* Avoid warnings for unused tag *)
-          flag ["tests"] N;
+        (* Avoid warnings for unused tag *)
+        flag ["tests"] N;
 
-          (* When one link an OCaml library/binary/package, one should use
-           * -linkpkg *)
-          flag ["ocaml"; "link"; "program"] & A"-linkpkg";
+        (* When one link an OCaml library/binary/package, one should use
+         * -linkpkg *)
+        flag ["ocaml"; "link"; "program"] & A"-linkpkg";
 
-          (* For each ocamlfind package one inject the -package option when
-           * compiling, computing dependencies, generating documentation and
-           * linking. *)
-          List.iter
-            begin fun pkg ->
-              let base_args = [A"-package"; A pkg] in
-              (* TODO: consider how to really choose camlp4o or camlp4r. *)
-              let syn_args = [A"-syntax"; A "camlp4o"] in
-              let (args, pargs) =
-                (* Heuristic to identify syntax extensions: whether they end in
-                   ".syntax"; some might not.
-                *)
-                if not (conf.no_automatic_syntax) &&
-                   (Filename.check_suffix pkg "syntax" ||
-                    List.mem pkg well_known_syntax) then
-                  (syn_args @ base_args, syn_args)
-                else
-                  (base_args, [])
-              in
-              flag ["ocaml"; "compile";  "pkg_"^pkg] & S args;
-              flag ["ocaml"; "ocamldep"; "pkg_"^pkg] & S args;
-              flag ["ocaml"; "doc";      "pkg_"^pkg] & S args;
-              flag ["ocaml"; "link";     "pkg_"^pkg] & S base_args;
-              flag ["ocaml"; "infer_interface"; "pkg_"^pkg] & S args;
+        (* For each ocamlfind package one inject the -package option when
+         * compiling, computing dependencies, generating documentation and
+         * linking. *)
+        List.iter
+          begin fun pkg ->
+            let base_args = [A"-package"; A pkg] in
+            (* TODO: consider how to really choose camlp4o or camlp4r. *)
+            let syn_args = [A"-syntax"; A "camlp4o"] in
+            let (args, pargs) =
+              (* Heuristic to identify syntax extensions: whether they end in
+                 ".syntax"; some might not.
+              *)
+              if not (conf.no_automatic_syntax) &&
+                 (Filename.check_suffix pkg "syntax" ||
+                  List.mem pkg well_known_syntax) then
+                (syn_args @ base_args, syn_args)
+              else
+                (base_args, [])
+            in
+            flag ["ocaml"; "compile";  "pkg_"^pkg] & S args;
+            flag ["ocaml"; "ocamldep"; "pkg_"^pkg] & S args;
+            flag ["ocaml"; "doc";      "pkg_"^pkg] & S args;
+            flag ["ocaml"; "link";     "pkg_"^pkg] & S base_args;
+            flag ["ocaml"; "infer_interface"; "pkg_"^pkg] & S args;
 
-              (* TODO: Check if this is allowed for OCaml < 3.12.1 *)
-              flag ["ocaml"; "compile";  "package("^pkg^")"] & S pargs;
-              flag ["ocaml"; "ocamldep"; "package("^pkg^")"] & S pargs;
-              flag ["ocaml"; "doc";      "package("^pkg^")"] & S pargs;
-              flag ["ocaml"; "infer_interface"; "package("^pkg^")"] & S pargs;
-            end
-            (find_packages ());
+            (* TODO: Check if this is allowed for OCaml < 3.12.1 *)
+            flag ["ocaml"; "compile";  "package("^pkg^")"] & S pargs;
+            flag ["ocaml"; "ocamldep"; "package("^pkg^")"] & S pargs;
+            flag ["ocaml"; "doc";      "package("^pkg^")"] & S pargs;
+            flag ["ocaml"; "infer_interface"; "package("^pkg^")"] & S pargs;
+          end
+          (find_packages ());
 
-          (* Like -package but for extensions syntax. Morover -syntax is useless
-           * when linking. *)
-          List.iter begin fun syntax ->
+        (* Like -package but for extensions syntax. Morover -syntax is useless
+         * when linking. *)
+        List.iter begin fun syntax ->
           flag ["ocaml"; "compile";  "syntax_"^syntax] & S[A"-syntax"; A syntax];
           flag ["ocaml"; "ocamldep"; "syntax_"^syntax] & S[A"-syntax"; A syntax];
           flag ["ocaml"; "doc";      "syntax_"^syntax] & S[A"-syntax"; A syntax];
           flag ["ocaml"; "infer_interface"; "syntax_"^syntax] &
-                S[A"-syntax"; A syntax];
-          end (find_syntaxes ());
+          S[A"-syntax"; A syntax];
+        end (find_syntaxes ());
 
-          (* The default "thread" tag is not compatible with ocamlfind.
-           * Indeed, the default rules add the "threads.cma" or "threads.cmxa"
-           * options when using this tag. When using the "-linkpkg" option with
-           * ocamlfind, this module will then be added twice on the command line.
-           *
-           * To solve this, one approach is to add the "-thread" option when using
-           * the "threads" package using the previous plugin.
-           *)
-          flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
-          flag ["ocaml"; "pkg_threads"; "doc"] (S[A "-I"; A "+threads"]);
-          flag ["ocaml"; "pkg_threads"; "link"] (S[A "-thread"]);
-          flag ["ocaml"; "pkg_threads"; "infer_interface"] (S[A "-thread"]);
-          flag ["c"; "pkg_threads"; "compile"] (S[A "-thread"]);
-          flag ["ocaml"; "package(threads)"; "compile"] (S[A "-thread"]);
-          flag ["ocaml"; "package(threads)"; "doc"] (S[A "-I"; A "+threads"]);
-          flag ["ocaml"; "package(threads)"; "link"] (S[A "-thread"]);
-          flag ["ocaml"; "package(threads)"; "infer_interface"] (S[A "-thread"]);
-          flag ["c"; "package(threads)"; "compile"] (S[A "-thread"]);
+        (* The default "thread" tag is not compatible with ocamlfind.
+         * Indeed, the default rules add the "threads.cma" or "threads.cmxa"
+         * options when using this tag. When using the "-linkpkg" option with
+         * ocamlfind, this module will then be added twice on the command line.
+         *
+         * To solve this, one approach is to add the "-thread" option when using
+         * the "threads" package using the previous plugin.
+        *)
+        flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
+        flag ["ocaml"; "pkg_threads"; "doc"] (S[A "-I"; A "+threads"]);
+        flag ["ocaml"; "pkg_threads"; "link"] (S[A "-thread"]);
+        flag ["ocaml"; "pkg_threads"; "infer_interface"] (S[A "-thread"]);
+        flag ["c"; "pkg_threads"; "compile"] (S[A "-thread"]);
+        flag ["ocaml"; "package(threads)"; "compile"] (S[A "-thread"]);
+        flag ["ocaml"; "package(threads)"; "doc"] (S[A "-I"; A "+threads"]);
+        flag ["ocaml"; "package(threads)"; "link"] (S[A "-thread"]);
+        flag ["ocaml"; "package(threads)"; "infer_interface"] (S[A "-thread"]);
+        flag ["c"; "package(threads)"; "compile"] (S[A "-thread"]);
 
       | _ ->
-          ()
+        ()
 end
 
 module MyOCamlbuildBase = struct
@@ -436,9 +580,6 @@ module MyOCamlbuildBase = struct
   (** Base functions for writing myocamlbuild.ml
       @author Sylvain Le Gall
     *)
-
-
-
 
 
   open Ocamlbuild_plugin
@@ -451,9 +592,6 @@ module MyOCamlbuildBase = struct
   type tag = string
 
 
-(* # 62 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
-
-
   type t =
       {
         lib_ocaml: (name * dir list * string list) list;
@@ -464,6 +602,9 @@ module MyOCamlbuildBase = struct
          *)
         includes:  (dir * dir list) list;
       }
+
+
+(* # 110 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
 
 
   let env_filename =
@@ -519,7 +660,7 @@ module MyOCamlbuildBase = struct
                  | nm, [], intf_modules ->
                      ocaml_lib nm;
                      let cmis =
-                       List.map (fun m -> (String.uncapitalize m) ^ ".cmi")
+                       List.map (fun m -> (OASISString.uncapitalize_ascii m) ^ ".cmi")
                                 intf_modules in
                      dep ["ocaml"; "link"; "library"; "file:"^nm^".cma"] cmis
                  | nm, dir :: tl, intf_modules ->
@@ -532,7 +673,7 @@ module MyOCamlbuildBase = struct
                             ["compile"; "infer_interface"; "doc"])
                        tl;
                      let cmis =
-                       List.map (fun m -> dir^"/"^(String.uncapitalize m)^".cmi")
+                       List.map (fun m -> dir^"/"^(OASISString.uncapitalize_ascii m)^".cmi")
                                 intf_modules in
                      dep ["ocaml"; "link"; "library"; "file:"^dir^"/"^nm^".cma"]
                          cmis)
@@ -606,30 +747,20 @@ module MyOCamlbuildBase = struct
 end
 
 
-# 608 "myocamlbuild.ml"
+# 749 "myocamlbuild.ml"
 open Ocamlbuild_plugin;;
 let package_default =
   {
      MyOCamlbuildBase.lib_ocaml =
        [
-          ("eliom_typechecker",
-            ["compiler"; "compiler/driver"; "compiler/typing"],
-            []);
-          ("eliom_lang_ppx", ["lib"], []);
+          ("eliomlang_ppx", ["lib"], []);
           ("eliom_runtime_server", ["runtime/server"], []);
           ("eliom_runtime_client", ["runtime/client"], ["Eliom_wrap"]);
           ("eliom_runtime_lwt", ["runtime/lwt"], [])
        ];
      lib_c = [];
      flags = [];
-     includes =
-       [
-          ("runtime/lwt", ["runtime/server"]);
-          ("lib", ["compiler"; "compiler/driver"; "compiler/typing"]);
-          ("compiler/typing", ["compiler"; "compiler/driver"]);
-          ("compiler/driver", ["compiler"; "compiler/typing"]);
-          ("compiler", ["compiler/driver"; "compiler/typing"])
-       ]
+     includes = [("runtime/lwt", ["runtime/server"]); ("bin", ["lib"])]
   }
   ;;
 
@@ -637,7 +768,7 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 640 "myocamlbuild.ml"
+# 771 "myocamlbuild.ml"
 (* OASIS_STOP *)
 open Ocamlbuild_plugin
 

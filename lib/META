@@ -1,12 +1,12 @@
 # OASIS_START
-# DO NOT EDIT (digest: b8f4a961a8d16027f8d2563f78b746c1)
+# DO NOT EDIT (digest: cb9d4381cbf71625e9eeee59a228bcf6)
 version = "0.1.0"
 description = "Eliom-lang"
 requires = "eliom_typechecker ppx_tools ppx_tools.metaquot ppx_core"
-archive(byte) = "eliom_lang_ppx.cma"
-archive(byte, plugin) = "eliom_lang_ppx.cma"
-archive(native) = "eliom_lang_ppx.cmxa"
-archive(native, plugin) = "eliom_lang_ppx.cmxs"
-exists_if = "eliom_lang_ppx.cma"
+archive(byte) = "eliomlang_ppx.cma"
+archive(byte, plugin) = "eliomlang_ppx.cma"
+archive(native) = "eliomlang_ppx.cmxa"
+archive(native, plugin) = "eliomlang_ppx.cmxs"
+exists_if = "eliomlang_ppx.cma"
 # OASIS_STOP
 

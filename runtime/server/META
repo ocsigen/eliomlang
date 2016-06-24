@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 92052bf1aea71b1374da9f033b9af7dd)
+# DO NOT EDIT (digest: 1251d4d92d779f8c267c3669a21f8d89)
 package "runtime" (
  description = "Virtual container"
  package "server" (
@@ -17,7 +17,7 @@ package "runtime" (
   version = "0.1.0"
   description = "Eliom-lang"
   directory = "lwt"
-  requires = "eliom_lang.runtime.server lwt"
+  requires = "eliomlang.runtime.server lwt"
   archive(byte) = "eliom_runtime_lwt.cma"
   archive(byte, plugin) = "eliom_runtime_lwt.cma"
   archive(native) = "eliom_runtime_lwt.cmxa"
