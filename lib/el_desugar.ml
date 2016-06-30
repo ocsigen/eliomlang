@@ -73,9 +73,7 @@ module Section = struct
 
   let attribute ~side ~loc =
     let txt = match side with
-      | `Fragment
       | `Client -> "eliom.client"
-      | `Escaped_value | `Injection
       | `Server -> "eliom.server"
       | `Shared -> "eliom.shared"
     in
@@ -83,51 +81,86 @@ module Section = struct
 
   let structure ~side ~loc str =
     let s = attribute ~side ~loc in
-    Str.extension ~loc (s, PStr str)
+    Str.extension ~loc (s, PStr [str])
 
   let signature ~side ~loc si =
     let s = attribute ~side ~loc in
-    Sig.extension ~loc (s, PSig si)
+    Sig.extension ~loc (s, PSig [si])
 
 end
 
-let mapper = object (self)
-  inherit [Context.t] Ppx_core.Ast_traverse.map_with_context as super
+let possible_annotations =
+  ["shared.start"; "client.start" ;"server.start";
+   "shared"; "client"; "server"]
+
+
+let expression_mapper = object (self)
+  inherit [ [ `Client | `Server | `None ] ] Ppx_core.Ast_traverse.map_with_context as super
+
+  method! structure_item context stri =
+    let loc = stri.pstr_loc in
+    match stri.pstr_desc with
+    | Pstr_extension (({txt}, _), _) when is_annotation txt possible_annotations ->
+      str_error ~loc
+        "The %%%%%s extension is only available for first class modules and functors."
+        txt
+    | _ -> super#structure_item context stri
+
+  method! signature_item context sigi =
+    let loc = sigi.psig_loc in
+    match sigi.psig_desc with
+    | Psig_extension (({txt}, _), _) when is_annotation txt possible_annotations ->
+      sig_error ~loc
+        "The %%%%%s extension is only available for first class modules and functors."
+        txt
+    | _ -> super#signature_item context sigi
 
   method! expression context expr =
     let loc = expr.pexp_loc in
     let attrs = expr.pexp_attributes in
-    match expr, context with
+    match expr with
 
     (* [%shared ... ] *)
-    | {pexp_desc = Pexp_extension ({txt},PStr [{pstr_desc = Pstr_eval (frag_exp,attrs')}])},
-      `Server
+    | {pexp_desc = Pexp_extension ({txt}, payload)}
       when is_annotation txt ["shared"] ->
-      let e = Shared.expression ~loc frag_exp in
-      self#expression context @@ exp_add_attrs (attrs@attrs') e
-
+      begin match context, payload with
+        | `Server, PStr [{pstr_desc = Pstr_eval (frag_exp,attrs')}] ->
+          let e = Shared.expression ~loc frag_exp in
+          self#expression context @@ exp_add_attrs (attrs@attrs') e
+        | `Server, _ ->
+          exp_error ~loc
+            "Wrong content for a shared fragment. It should be an expression."
+        | `Client, _ ->
+          exp_error ~loc
+            "Shared fragments are only in a server context, \
+             but it is used in a client context."
+        | `None, _ ->
+          exp_error ~loc
+            "Shared fragments are only in a server context, \
+             but it is used in an ocaml context."
+      end
     | _ -> super#expression context expr
 
-  (** Toplevel translation *)
-  method private dispatch_str ~loc context x =
-    match context with
-    | `Shared ->
-      let f x =
-        let x = Shared.structure_item x in
-        self#structure `Client [x.client] @ self#structure `Server [x.server]
-      in flatmap f x
-    | #Context.t as side ->
-      [Section.structure ~side ~loc @@ List.map (self#structure_item side) x]
+end
 
-  method private dispatch_sig ~loc context x =
-    match context with
-    | `Shared ->
-      let f x =
-        let x = Shared.signature_item x in
-        self#signature `Client [x.client] @ self#signature `Server [x.server]
-      in flatmap f x
-    | #Context.t as side ->
-      [Section.signature ~side ~loc @@ List.map (self#signature_item side) x]
+let mapper = object (self)
+  inherit [ Context.t ] Ppx_core.Ast_traverse.map_with_context as super
+
+  (** Toplevel translation *)
+  method private dispatch_str context stri =
+    let loc = stri.pstr_loc in
+    match stri.pstr_desc, context with
+    | Pstr_module _ , (`Shared | `Client | `Server as side) ->
+      [ Section.structure ~side ~loc @@ self#structure_item side stri ]
+    | _, `Shared ->
+      let x = Shared.structure_item stri in [
+        Section.structure ~side:`Client ~loc @@ self#structure_item `Client x.client ;
+        Section.structure ~side:`Server ~loc @@ self#structure_item `Server x.server
+      ]
+    | _, (`Client | `Server as side) ->
+      [ Section.structure ~side ~loc @@ expression_mapper#structure_item side stri ]
+    | _, `None ->
+      [ expression_mapper#structure_item `None stri ]
 
   method! structure context structs =
     let f c pstr =
@@ -135,13 +168,16 @@ let mapper = object (self)
       match pstr.pstr_desc with
       | Pstr_extension (({txt}, payload), _)
         when is_annotation txt ["shared.start"; "client.start" ;"server.start"] ->
-        begin match payload with
-          | PStr [] -> (Context.of_string txt, [])
-          | _ ->
-            c, [ str_error ~loc "Wrong payload for the %%%%%s extension." txt ]
-        end
+        (Context.of_string txt, get_empty_payload ~loc txt payload)
+      | Pstr_extension (({txt}, payload), _)
+        when is_annotation txt ["shared" ; "client" ; "server"] ->
+        let str =
+          flatmap (self#dispatch_str (Context.of_string txt)) @@
+          get_str_payload ~loc txt payload
+        in
+        (c, str)
       | _ ->
-        (c, self#dispatch_str ~loc c [pstr])
+        (c, self#dispatch_str c pstr)
     in
     fold_accum f structs context
 
@@ -149,13 +185,28 @@ let mapper = object (self)
     let f c psig =
       let loc = psig.psig_loc in
       match psig.psig_desc with
-      | Psig_extension (({txt=("shared.start"|"client.start"|"server.start" as txt)}, PStr strs), _) ->
-        if strs <> [] then
-          c, [ sig_error ~loc
-              "The %%%%%s extension doesn't accept arguments." txt ]
-        else (Context.of_string txt, [])
+      | Psig_extension (({txt}, payload), _)
+        when is_annotation txt ["shared.start"; "client.start"; "server.start"] ->
+        (Context.of_string txt, get_empty_sig_payload ~loc txt payload)
+      | Psig_extension (({txt}, payload), _)
+        when is_annotation txt ["shared"] ->
+        let psig = get_sig_payload ~loc txt payload in
+        let f x =
+          let x = Shared.signature_item x in [
+            Section.signature ~loc ~side:`Client x.client ;
+            Section.signature ~loc ~side:`Server x.server ;
+          ]
+        in
+        (c, flatmap f psig)
+      | Psig_extension (({txt}, payload), _)
+        when is_annotation txt ["client"; "server"] ->
+        let side = Context.of_string txt in
+        let new_sig =
+          List.map (Section.signature ~side ~loc) @@ get_sig_payload ~loc txt payload
+        in
+        (c, new_sig)
       | _ ->
-        (c, self#dispatch_sig ~loc c [psig])
+        (c, [super#signature_item c psig])
     in
     fold_accum f sigs context
 
@@ -164,7 +215,7 @@ end
 
 
 let mapper' _args =
-  let c = `Server in
+  let c = `None in
   {AM.default_mapper
    with
     structure = (fun _ -> mapper#structure c) ;

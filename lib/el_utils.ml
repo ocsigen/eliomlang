@@ -95,6 +95,36 @@ let rec get_attr s = function
   | _ :: t -> get_attr s t
   | [] -> None
 
+let get_empty_payload ~loc txt payload =
+  let ppf : _ format6 =
+    "The %%%%%s extension does not expect any payload."
+  in match payload with
+  | PStr [] | PSig [] -> []
+  | _ -> [ str_error ~loc ppf txt ]
+
+let get_empty_sig_payload ~loc txt payload =
+  let ppf : _ format6 =
+    "The %%%%%s extension does not expect any payload."
+  in match payload with
+  | PStr [] | PSig [] -> []
+  | _ -> [ sig_error ~loc ppf txt ]
+
+let get_str_payload ~loc txt payload =
+  let ppf : _ format6 =
+    "Wrong payload for the %%%%%s extension. It should be a structure."
+  in match payload with
+  | PStr x -> x
+  | _ -> [ str_error ~loc ppf txt ]
+
+let get_sig_payload ~loc txt payload =
+  let ppf : _ format6 =
+    "Wrong payload for the %%%%%s extension. It should be a signature."
+  in match payload with
+  | PSig x -> x
+  | _ -> [ sig_error ~loc ppf txt ]
+
+
+
 let is_annotation txt l =
   List.exists (Ppx_core.Name.matches ~pattern:("eliom."^txt)) l
 
@@ -116,6 +146,7 @@ module Context = struct
     | `Server (* [%%server ... ] *)
     | `Client (* [%%client ... ] *)
     | `Shared
+    | `None
   ]
 end
 
