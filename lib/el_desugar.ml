@@ -28,29 +28,34 @@ module Shared = struct
   type 'a t = { client : 'a ; server : 'a }
 
   let server = object
-    inherit Ppx_core.Ast_traverse.map as super
-    method! expression expr = match expr with
-      | [%expr [%client [%e? _ ]]] -> expr
-      | [%expr ~% [%e? injection_expr ]] -> injection_expr
-      | _ -> super#expression expr
+    inherit [_] Ppx_core.Ast_traverse.map_with_context as super
+    method! expression ctx expr = match expr with
+      | [%expr [%client [%e? fragment_expr ]]] ->
+        [%expr [%client [%e super#expression `Client fragment_expr ]]]
+      | [%expr ~% [%e? injection_expr ]] ->
+        begin match ctx with
+          | `Shared -> injection_expr
+          | `Client -> expr
+        end
+      | _ -> super#expression ctx expr
   end
 
   let client = object
     inherit [_] Ppx_core.Ast_traverse.map_with_context as super
     method! expression ctx expr = match expr with
       | [%expr [%client [%e? fragment_expr ]]] ->
-        super#expression `Fragment fragment_expr
+        super#expression `Client fragment_expr
       | [%expr ~% [%e? injection_expr ]] ->
         begin match ctx with
-          | `Top -> expr
-          | `Fragment -> injection_expr
+          | `Shared -> expr
+          | `Client -> injection_expr
         end
       | _ -> super#expression ctx expr
   end
 
   let expression ~loc expr =
-    let server_expr = server#expression expr in
-    let client_expr = client#expression `Top expr in
+    let server_expr = server#expression `Shared expr in
+    let client_expr = client#expression `Shared expr in
     [%expr
       Eliom_lib.create_shared_value
         [%e server_expr]
@@ -58,13 +63,13 @@ module Shared = struct
     ] [@metaloc loc]
 
   let structure_item stri =
-    let server = server#structure_item stri in
-    let client = client#structure_item `Top stri in
+    let server = server#structure_item `Shared stri in
+    let client = client#structure_item `Shared stri in
     { client ; server }
 
   let signature_item sigi =
-    let server = server#signature_item sigi in
-    let client = client#signature_item `Top sigi in
+    let server = server#signature_item `Shared sigi in
+    let client = client#signature_item `Shared sigi in
     { client ; server }
 
 end
