@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: b91f4a810c0b2247e8a9f723af94b135)
+# DO NOT EDIT (digest: 9afc5696580ee0cfab0cde82f22c015d)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -16,21 +16,20 @@ true: annot, bin_annot
 "_darcs": not_hygienic
 # Library eliomlang_ppx
 "lib/eliomlang_ppx.cmxs": use_eliomlang_ppx
-<lib/*.ml{,i,y}>: package(eliom_typechecker)
 <lib/*.ml{,i,y}>: package(ppx_core)
 <lib/*.ml{,i,y}>: package(ppx_tools)
 <lib/*.ml{,i,y}>: package(ppx_tools.metaquot)
 # Executable eliom_desugar
-"bin/eliom_desugar.byte": package(eliom_typechecker)
-"bin/eliom_desugar.byte": package(ppx_core)
-"bin/eliom_desugar.byte": package(ppx_tools)
-"bin/eliom_desugar.byte": package(ppx_tools.metaquot)
-"bin/eliom_desugar.byte": use_eliomlang_ppx
-<bin/*.ml{,i,y}>: package(eliom_typechecker)
+<bin/eliom_desugar.{native,byte}>: package(ppx_core)
+<bin/eliom_desugar.{native,byte}>: package(ppx_tools)
+<bin/eliom_desugar.{native,byte}>: package(ppx_tools.metaquot)
+<bin/eliom_desugar.{native,byte}>: use_eliomlang_ppx
 <bin/*.ml{,i,y}>: package(ppx_core)
 <bin/*.ml{,i,y}>: package(ppx_tools)
 <bin/*.ml{,i,y}>: package(ppx_tools.metaquot)
 <bin/*.ml{,i,y}>: use_eliomlang_ppx
+# Library eliomlang_ppx_ex
+"bin/eliomlang_ppx_ex.cmxs": use_eliomlang_ppx_ex
 # Library eliom_runtime_server
 "runtime/server/eliom_runtime_server.cmxs": use_eliom_runtime_server
 <runtime/server/*.ml{,i,y}>: package(re)
@@ -48,14 +47,10 @@ true: annot, bin_annot
 # Work around ppx_core issues
 <*/*.{native,byte}>: predicate(ppx_driver)
 
-not <compiler/**>: warn(+A-4-6-9-40-42-44-48)
-<compiler/**>: principal, warn(+33..39+48+50)
+true: warn(+A-4-6-9-40-42-44-48)
 true: warn_error(+1..49)
 true: strict_sequence, safe_string, short_paths, strict_formats
 true: bin_annot
 
 # Better locations and loc in .mlis
 true: keep_locs
-
-# We use the local typechecker in priority.
-<lib/**> or <bin/**>: open(Eliom_typechecker)

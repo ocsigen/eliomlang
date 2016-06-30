@@ -1,10 +1,10 @@
 # OASIS_START
-# DO NOT EDIT (digest: 1251d4d92d779f8c267c3669a21f8d89)
+# DO NOT EDIT (digest: b6680d7de259a620bba1ad82ad385476)
 package "runtime" (
  description = "Virtual container"
  package "server" (
   version = "0.1.0"
-  description = "Eliom-lang"
+  description = "Eliomlang"
   directory = "server"
   requires = "re"
   archive(byte) = "eliom_runtime_server.cma"
@@ -15,7 +15,7 @@ package "runtime" (
  )
  package "lwt" (
   version = "0.1.0"
-  description = "Eliom-lang"
+  description = "Eliomlang"
   directory = "lwt"
   requires = "eliomlang.runtime.server lwt"
   archive(byte) = "eliom_runtime_lwt.cma"
@@ -26,12 +26,32 @@ package "runtime" (
  )
  package "client" (
   version = "0.1.0"
-  description = "Eliom-lang"
+  description = "Eliomlang"
   directory = "client"
   requires = "js_of_ocaml js_of_ocaml.ppx"
   archive(byte) = "eliom_runtime_client.cma"
   archive(byte, plugin) = "eliom_runtime_client.cma"
   exists_if = "eliom_runtime_client.cma"
+ )
+)
+package "ppx" (
+ version = "0.1.0"
+ description = "Eliomlang"
+ archive(byte) = "eliomlang_ppx_ex.cma"
+ archive(byte, plugin) = "eliomlang_ppx_ex.cma"
+ archive(native) = "eliomlang_ppx_ex.cmxa"
+ archive(native, plugin) = "eliomlang_ppx_ex.cmxs"
+ ppx = "eliom_desugar"
+ exists_if = "eliomlang_ppx_ex.cma"
+ package "internal" (
+  version = "0.1.0"
+  description = "Eliomlang"
+  requires = "ppx_tools ppx_tools.metaquot ppx_core"
+  archive(byte) = "eliomlang_ppx.cma"
+  archive(byte, plugin) = "eliomlang_ppx.cma"
+  archive(native) = "eliomlang_ppx.cmxa"
+  archive(native, plugin) = "eliomlang_ppx.cmxs"
+  exists_if = "eliomlang_ppx.cma"
  )
 )
 # OASIS_STOP

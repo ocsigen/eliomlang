@@ -1,7 +1,7 @@
 OASISFormat: 0.4
-Name:        Eliom-lang
+Name:        Eliomlang
 Version:     0.1.0
-Synopsis:    Eliom-lang
+Synopsis:    Eliomlang
 Authors:     Gabriel Radanne
 License:     GPL
 Plugins:     META (0.4), DevFiles (0.4)
@@ -13,20 +13,28 @@ OCamlVersion:     >= 4.03.0
 ## Ppx libraries
 
 Library "eliomlang_ppx"
+  FindlibContainers: eliomlang.ppx
+  FindlibName: internal
   Path: lib
   Modules: El_desugar
   InternalModules: El_utils
   BuildDepends:
-    eliom_typechecker,
     ppx_tools, ppx_tools.metaquot, ppx_core
-  Install: false
 
 ## Executable
 
 Executable "eliom_desugar"
   Path: bin
   MainIs: eliom_desugar.ml
-  BuildDepends: eliomlang_ppx
+  BuildDepends: eliomlang.ppx.internal
+  CompiledObject: best
+
+Library "eliomlang_ppx_ex"
+  FindlibContainers: eliomlang
+  FindlibName: ppx
+  Path: bin
+  InternalModules: Eliom_desugar_ex
+  XMETAExtraLines: ppx = "eliom_desugar"
 
 ## Runtime
 
@@ -38,7 +46,6 @@ Library "eliom_runtime_server"
   Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
   InternalModules: Eliom_serial
   BuildDepends: re
-  Build$: flag(runtime)
 
 Library "eliom_runtime_client"
   FindlibContainers: eliomlang.runtime
@@ -49,7 +56,6 @@ Library "eliom_runtime_client"
   InternalModules: Eliom_serial
   BuildDepends: js_of_ocaml, js_of_ocaml.ppx
   CompiledObject: byte
-  Build$: flag(runtime)
 
 Library "eliom_runtime_lwt"
   FindlibContainers: eliomlang.runtime
@@ -58,7 +64,6 @@ Library "eliom_runtime_lwt"
   Path: runtime/lwt
   Modules: Eliom_lwt
   BuildDepends: eliomlang.runtime.server, lwt
-  Build$: flag(runtime)
 
 # Document "eliom-lang"
 #   Type: ocamlbuild (0.3)
