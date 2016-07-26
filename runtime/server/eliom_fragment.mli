@@ -1,5 +1,5 @@
 
-type +'a t
+type +'a[@client] t
 
 val create : ?loc:Eliom_serial.pos -> id:int -> _ t
 

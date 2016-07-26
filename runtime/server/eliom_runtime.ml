@@ -58,7 +58,7 @@ end
 
 
 
-type 'a fragment = 'a Eliom_fragment.t
+type 'a[@client] fragment = 'a Eliom_fragment.t
 
 module StringTbl = Hashtbl.Make(struct
     include String

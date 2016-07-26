@@ -1,6 +1,6 @@
 module Repr = Eliom_serial.Fragment_server_repr
 
-type +'a t = 'a Repr.t
+type +'a[@client] t = 'a Repr.t
 
 let unwrapper = Eliom_wrap.(create_unwrapper @@ id_of_int Repr.unwrap_id)
 

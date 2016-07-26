@@ -33,7 +33,7 @@ end
 val eliom_script :
   Eliom_serial.global_data -> Eliom_serial.request_data -> string
 
-type +'a fragment = 'a Eliom_fragment.t
+type +'a[@client] fragment = 'a Eliom_fragment.t
 
 (** Registers a client fragment datum for the next server section when
     executed in a global_data
