@@ -1,4 +1,4 @@
-opam-version: "1.2"
+opam-version: "2.0"
 name:         "eliomlang"
 maintainer:   "Gabriel Radanne <drupyog@zoho.com>"
 authors:      [ "Gabriel Radanne" ]
@@ -7,7 +7,7 @@ bug-reports:  "https://github.com/ocsigen/eliomlang/issues"
 dev-repo:     "https://github.com/ocsigen/eliomlang.git"
 license:      "ISC"
 version: "dev"
-tags: [ ocsigen eliom web ]
+tags: [ "ocsigen" "eliom" "web" ]
 build: [
   ["ocaml" "setup.ml" "-configure"
     "--enable-tests" {test}
@@ -19,11 +19,12 @@ build-doc: ["ocaml" "setup.ml" "-doc"]
 install: ["ocaml" "setup.ml" "-install"]
 remove: ["ocamlfind" "remove" "eliom-lang"]
 depends: [
+  "ocaml" {>= "4.03.0"}
   "ocamlfind" {build}
   "ocamlbuild" {build}
   "lwt"
   "js_of_ocaml"
   "ppx_tools"
   "ppx_core"
+  "re"
 ]
-available: ocaml-version >= "4.03"
