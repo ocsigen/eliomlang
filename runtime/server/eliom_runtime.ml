@@ -134,12 +134,13 @@ module Request_data = struct
   type hook = {
     get : unit -> t ;
     add : Eliom_serial.fragment -> bool ;
+    test : unit -> bool ;
   }
   let hook : hook option ref = ref None
 
-  let set_functions get add =
+  let set_functions get add test =
     match !hook with
-    | None -> hook := Some { get ; add }
+    | None -> hook := Some { get ; add ; test }
     | Some _ -> raise Hook_alread_set
 
   let get_functions () =
@@ -149,6 +150,7 @@ module Request_data = struct
 
   let get () = (get_functions()).get ()
   let add x = (get_functions()).add x
+  let test () = (get_functions()).test ()
 
   let serial ~debug : Eliom_serial.request_data =
     let clear_client_loc x =
@@ -201,9 +203,6 @@ let close_client_section compilation_unit_id injection_data =
   Array.map injection_datum injection_data
 
 
-let is_global = ref false
-let set_global b = is_global := b
-
 let register_fragment ~closure_id ~args ~value =
   let fragment_datum =
     Eliom_fragment.serial ~closure_id ~args value
@@ -221,11 +220,11 @@ let last_id = ref 0
 
 let fragment ?pos closure_id args =
   let id =
-    if !is_global then begin
+    if Request_data.test () then 0
+    else begin
       incr last_id;
       !last_id
-    end else
-      0
+    end
   in
   let args = Poly.make args in
   let value = Eliom_fragment.create ?loc:pos ~id in

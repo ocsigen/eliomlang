@@ -24,7 +24,11 @@ module Request_data : sig
   exception Hook_alread_set
   exception Hook_not_set
 
-  val set_functions : (unit -> t) -> (Eliom_serial.fragment -> bool) -> unit
+  val set_functions :
+    (unit -> t) ->
+    (Eliom_serial.fragment -> bool) ->
+    (unit -> bool) ->
+    unit
 
   val serial : debug:bool -> Eliom_serial.request_data
 
@@ -40,12 +44,6 @@ type +'a[@client] fragment = 'a Eliom_fragment.t
     (cf. {!Eliom_runtime.set_global}) or in the
     request_data when executed in a request. *)
 val fragment : ?pos:Eliom_serial.pos -> string -> 'args -> 'a fragment
-
-(** All client values created between [set_global true] and
-    [set_global false] are considered global client values
-    (cf. <<a_manual chapter="clientserver-language" chapter="clientvalues"|the
-      manual>>).  *)
-val set_global : bool -> unit
 
 (** Called at the end of each server or shared section. The argument
     identifies the compilation unit.

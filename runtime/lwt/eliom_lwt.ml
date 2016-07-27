@@ -18,7 +18,10 @@ let add frag =
   | Some l -> l := frag :: !l ; true
   | None -> false
 
-let () = Eliom_runtime.Request_data.set_functions flush add
+let test () =
+  Lwt.get hook <> None
+
+let () = Eliom_runtime.Request_data.set_functions flush add test
 
 let handle_request ~debug f =
   let f () =
