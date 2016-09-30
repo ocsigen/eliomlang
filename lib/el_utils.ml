@@ -95,7 +95,7 @@ let rec get_attr s = function
   | _ :: t -> get_attr s t
   | [] -> None
 
-let get_empty_payload ~loc txt payload =
+let get_empty_str_payload ~loc txt payload =
   let ppf : _ format6 =
     "The %%%%%s extension does not expect any payload."
   in match payload with
@@ -142,12 +142,7 @@ module Context = struct
     else if f "eliom.client" s || f "eliom.client.start" s then `Client
     else invalid_arg "Eliom ppx: Not a context"
 
-  type t = [
-    | `Server (* [%%server ... ] *)
-    | `Client (* [%%client ... ] *)
-    | `Shared
-    | `None
-  ]
+  type t = Eliom_base.shside
 end
 
 
