@@ -40,7 +40,7 @@ let () =
   in
 
   let s = Printf.sprintf
-      "diff %s %s"
+      "diff -w -B --color %s %s"
       result_file expected_file
   in
 
