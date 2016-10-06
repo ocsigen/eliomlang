@@ -211,7 +211,15 @@ let dispatch
     end
 
 let mapper = object (self)
-  inherit [ Context.t ] Ppx_core.Ast_traverse.map_with_context
+  inherit [ Context.t ] Ppx_core.Ast_traverse.map_with_context as super
+
+  (* This avoid issues with structure and signature triggering on payloads. *)
+  method! payload c = function
+    | PStr s -> PStr (super#structure c s)
+    | PSig s -> PSig (super#signature c s)
+    | PTyp t -> PTyp (super#core_type c t)
+    | PPat (p, None) -> PPat (super#pattern c p, None)
+    | PPat (p, Some e) -> PPat (super#pattern c p, Some (super#expression c e))
 
   method! structure =
     let dispatch_str =
