@@ -80,6 +80,23 @@ SourceRepository head
   Location: https://github.com/Drup/eliom-lang.git
   Browser: https://github.com/Drup/eliom-lang
 
+## Test
+
+Executable "ppx_tester"
+  Path: bin
+  MainIs: ppx_tester.ml
+  BuildDepends: eliomlang.ppx.internal
+  CompiledObject: best
+  Install: false
+  Build$: flag(tests)
+
+Test basic_website
+  WorkingDirectory: _build/
+  PreCommand: cp -r ../test .
+  Command: $ppx_tester test/shared.eliom test/shared.result.eliom test/shared.expected.eliom
+  TestTools: ppx_tester
+  Run$: flag(tests)
+
 #Local Variables:
 #compile-command: "oasis setup"
 #End:

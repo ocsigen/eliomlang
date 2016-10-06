@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 9afc5696580ee0cfab0cde82f22c015d)
+# DO NOT EDIT (digest: 2e80757df338d1560a2bb114606e578f)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -24,10 +24,6 @@ true: annot, bin_annot
 <bin/eliom_desugar.{native,byte}>: package(ppx_tools)
 <bin/eliom_desugar.{native,byte}>: package(ppx_tools.metaquot)
 <bin/eliom_desugar.{native,byte}>: use_eliomlang_ppx
-<bin/*.ml{,i,y}>: package(ppx_core)
-<bin/*.ml{,i,y}>: package(ppx_tools)
-<bin/*.ml{,i,y}>: package(ppx_tools.metaquot)
-<bin/*.ml{,i,y}>: use_eliomlang_ppx
 # Library eliomlang_ppx_ex
 "bin/eliomlang_ppx_ex.cmxs": use_eliomlang_ppx_ex
 # Library eliom_runtime_server
@@ -42,6 +38,15 @@ true: annot, bin_annot
 <runtime/lwt/*.ml{,i,y}>: package(lwt)
 <runtime/lwt/*.ml{,i,y}>: package(re)
 <runtime/lwt/*.ml{,i,y}>: use_eliom_runtime_server
+# Executable ppx_tester
+<bin/ppx_tester.{native,byte}>: package(ppx_core)
+<bin/ppx_tester.{native,byte}>: package(ppx_tools)
+<bin/ppx_tester.{native,byte}>: package(ppx_tools.metaquot)
+<bin/ppx_tester.{native,byte}>: use_eliomlang_ppx
+<bin/*.ml{,i,y}>: package(ppx_core)
+<bin/*.ml{,i,y}>: package(ppx_tools)
+<bin/*.ml{,i,y}>: package(ppx_tools.metaquot)
+<bin/*.ml{,i,y}>: use_eliomlang_ppx
 # OASIS_STOP
 
 # Work around ppx_core issues
