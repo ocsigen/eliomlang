@@ -23,12 +23,15 @@ let%shared y = ~%y + 1
 
 let%shared y = ~%(y*2) + 1
 
+include%shared M
+include%server M
+
 module type%shared T = sig
 
   module%client M : S
   module%server M : S
 
-  module%shared M : sig
+  module M : sig
 
     type%shared t = int
 
@@ -36,5 +39,7 @@ module type%shared T = sig
     val%shared x : int
 
   end
+
+  include M
 
 end

@@ -152,7 +152,6 @@ end
 
 let str_classify x = match x.pstr_desc with
   | Pstr_module _ | Pstr_recmodule _ | Pstr_modtype _
-  | Pstr_include _ | Pstr_open _
     -> `Module
 
   | Pstr_type _ | Pstr_typext _
@@ -160,6 +159,7 @@ let str_classify x = match x.pstr_desc with
   | Pstr_class _ | Pstr_class_type _
     -> `Type
 
+  | Pstr_include _ | Pstr_open _
   | Pstr_eval _ | Pstr_value _ | Pstr_primitive _
   | Pstr_attribute _ | Pstr_extension _
     -> `Value
@@ -167,7 +167,6 @@ let str_classify x = match x.pstr_desc with
 
 let sig_classify x = match x.psig_desc with
   | Psig_module _ | Psig_recmodule _ | Psig_modtype _
-  | Psig_include _ | Psig_open _
     -> `Module
 
   | Psig_type _ | Psig_typext _
@@ -175,6 +174,7 @@ let sig_classify x = match x.psig_desc with
   | Psig_class _ | Psig_class_type _
     -> `Type
 
+  | Psig_include _ | Psig_open _
   | Psig_value _
   | Psig_attribute _ | Psig_extension _
     -> `Value

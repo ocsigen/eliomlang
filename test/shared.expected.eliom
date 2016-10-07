@@ -31,6 +31,9 @@
 [%%eliom.client let y = (~% (y * 2)) + 1 ]
 [%%eliom.server let y = (y * 2) + 1 ]
 
+[%%eliom.client include M]
+[%%eliom.server include M]
+[%%eliom.server include M]
 
 [%%eliom.shared
   module type T  =
@@ -49,4 +52,8 @@
           [%%eliom.client: val x : int]
           [%%eliom.server: val x : int]
        end]
-  end]
+
+      [%%eliom.client :include M]
+      [%%eliom.server :include M]
+
+end]
