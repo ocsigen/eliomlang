@@ -38,6 +38,26 @@ module Shared = struct
           | `Client -> expr
         end
       | _ -> super#expression ctx expr
+    method! structure c l =
+      let f s = match s.pstr_desc with
+        | Pstr_extension (({txt}, payload), _)
+          when is_annotation txt ["shared" ; "server"] ->
+          get_str_payload ~loc:s.pstr_loc txt payload
+        | Pstr_extension (({txt}, _), _)
+          when is_annotation txt ["client"] -> []
+        | _ -> [s]
+      in
+      super#structure c @@ flatmap f l
+    method! signature c l =
+      let f s = match s.psig_desc with
+        | Psig_extension (({txt}, payload), _)
+          when is_annotation txt ["shared" ; "server"] ->
+          get_sig_payload ~loc:s.psig_loc txt payload
+        | Psig_extension (({txt}, _), _)
+          when is_annotation txt ["client"] -> []
+        | _ -> [s]
+      in
+      super#signature c @@ flatmap f l
   end
 
   let client = object
@@ -51,6 +71,26 @@ module Shared = struct
           | `Client -> injection_expr
         end
       | _ -> super#expression ctx expr
+    method! structure c l =
+      let f s = match s.pstr_desc with
+        | Pstr_extension (({txt}, payload), _)
+          when is_annotation txt ["shared" ; "client"] ->
+          get_str_payload ~loc:s.pstr_loc txt payload
+        | Pstr_extension (({txt}, _), _)
+          when is_annotation txt ["server"] -> []
+        | _ -> [s]
+      in
+      super#structure c @@ flatmap f l
+    method! signature c l =
+      let f s = match s.psig_desc with
+        | Psig_extension (({txt}, payload), _)
+          when is_annotation txt ["shared" ; "client"] ->
+          get_sig_payload ~loc:s.psig_loc txt payload
+        | Psig_extension (({txt}, _), _)
+          when is_annotation txt ["server"] -> []
+        | _ -> [s]
+      in
+      super#signature c @@ flatmap f l
   end
 
   let expression ~loc expr =
@@ -76,51 +116,33 @@ end
 
 module Section = struct
 
-  let attribute ~side ~loc =
-    let txt = match side with
-      | `Client -> "eliom.client"
-      | `Server -> "eliom.server"
-      | `Shared -> "eliom.shared"
-    in
-    {Location. txt ; loc}
+  let attribute side = match (side : Context.t) with
+    | Side Client -> Some "eliom.client"
+    | Side Server -> Some "eliom.server"
+    | Shared -> Some "eliom.shared"
+    | Base -> None
 
   let structure ~side str =
     let loc = str.pstr_loc in
-    let s = attribute ~side ~loc in
-    Str.extension ~loc (s, PStr [str])
+    match attribute side with
+    | Some txt -> Str.extension ~loc ({txt;loc}, PStr [str])
+    | None -> str
 
   let signature ~side si =
     let loc = si.psig_loc in
-    let s = attribute ~side ~loc in
-    Sig.extension ~loc (s, PSig [si])
+    match attribute side with
+    | Some txt -> Sig.extension ~loc ({txt; loc}, PSig [si])
+    | None -> si
 
 end
 
-let possible_annotations =
+let _possible_annotations =
   ["shared.start"; "client.start" ;"server.start";
    "shared"; "client"; "server"]
 
 
 let expression_mapper = object (self)
-  inherit [ [ `Client | `Server | `Noside ] ] Ppx_core.Ast_traverse.map_with_context as super
-
-  method! structure_item context stri =
-    let loc = stri.pstr_loc in
-    match stri.pstr_desc with
-    | Pstr_extension (({txt}, _), _) when is_annotation txt possible_annotations ->
-      str_error ~loc
-        "The %%%%%s extension is only available for first class modules and functors."
-        txt
-    | _ -> super#structure_item context stri
-
-  method! signature_item context sigi =
-    let loc = sigi.psig_loc in
-    match sigi.psig_desc with
-    | Psig_extension (({txt}, _), _) when is_annotation txt possible_annotations ->
-      sig_error ~loc
-        "The %%%%%s extension is only available for first class modules and functors."
-        txt
-    | _ -> super#signature_item context sigi
+  inherit [ Eliom_base.side ] Ppx_core.Ast_traverse.map_with_context as super
 
   method! expression context expr =
     let loc = expr.pexp_loc in
@@ -131,17 +153,17 @@ let expression_mapper = object (self)
     | {pexp_desc = Pexp_extension ({txt}, payload)}
       when is_annotation txt ["shared"] ->
       begin match context, payload with
-        | `Server, PStr [{pstr_desc = Pstr_eval (frag_exp,attrs')}] ->
+        | Loc Server, PStr [{pstr_desc = Pstr_eval (frag_exp,attrs')}] ->
           let e = Shared.expression ~loc frag_exp in
           self#expression context @@ exp_add_attrs (attrs@attrs') e
-        | `Server, _ ->
+        | Loc Server, _ ->
           exp_error ~loc
             "Wrong content for a shared fragment. It should be an expression."
-        | `Client, _ ->
+        | Loc Client, _ ->
           exp_error ~loc
             "Shared fragments are only in a server context, \
              but it is used in a client context."
-        | `Noside, _ ->
+        | Poly, _ ->
           exp_error ~loc
             "Shared fragments are only in a server context, \
              but it is used in an ocaml context."
@@ -150,34 +172,22 @@ let expression_mapper = object (self)
 
 end
 
-let str_classify x = match x.pstr_desc with
-  | Pstr_module _ | Pstr_recmodule _ | Pstr_modtype _
-    -> `Module
+let should_dup_str x = match x.pstr_desc with
+  (* | Pstr_module _ *)
+  (* | Pstr_recmodule _ *)
+  (* | Pstr_modtype _ *)
+  (*   -> false *)
 
-  | Pstr_type _ | Pstr_typext _
-  | Pstr_exception _
-  | Pstr_class _ | Pstr_class_type _
-    -> `Type
-
-  | Pstr_include _ | Pstr_open _
-  | Pstr_eval _ | Pstr_value _ | Pstr_primitive _
-  | Pstr_attribute _ | Pstr_extension _
-    -> `Value
+  | _ -> false
 
 
-let sig_classify x = match x.psig_desc with
-  | Psig_module _ | Psig_recmodule _ | Psig_modtype _
-    -> `Module
+let should_dup_sig x = match x.psig_desc with
+  (* | Psig_module _ *)
+  (* | Psig_recmodule _ *)
+  (* | Psig_modtype _ *)
+  (*   -> false *)
 
-  | Psig_type _ | Psig_typext _
-  | Psig_exception _
-  | Psig_class _ | Psig_class_type _
-    -> `Type
-
-  | Psig_include _ | Psig_open _
-  | Psig_value _
-  | Psig_attribute _ | Psig_extension _
-    -> `Value
+  | _ -> false
 
 (** Toplevel dispatch mechanisms *)
 let dispatch
@@ -188,27 +198,28 @@ let dispatch
     classify (* figure out if something is a module decl *)
     shared_duplication (* duplicate shared expressions *)
 
-    context item =
-  match classify item with
-  (* We do not duplicate modules, we just recursively walk their content. *)
-  | `Module -> begin match context with
-      | `Shared | `Client | `Server as side ->
-        [ annotate ~side @@ selfrec side item ]
-      | `Noside ->
-        [ selfrec context item ]
-    end
-  (* We duplicate shared types and values. *)
-  | `Type | `Value -> begin match context with
-      | `Shared ->
-        let x : _ Shared.t = shared_duplication item in [
-          annotate ~side:`Client @@ selfrec `Client x.client ;
-          annotate ~side:`Server @@ selfrec `Server x.server
-        ]
-      | `Client | `Server as side ->
-        [ annotate ~side @@ exprrec side item ]
-      | `Noside ->
-        [ exprrec `Noside item ]
-    end
+    (context : Context.t) item =
+  if classify item
+  then begin match context with
+    | Shared | Side _ as side ->
+      [ annotate ~side @@ selfrec side item ]
+    | Base ->
+      [ selfrec context item ]
+  end
+  else begin match context with
+    | Shared ->
+      let x : _ Shared.t = shared_duplication item in
+      [ annotate ~side:(Side Client) @@
+        selfrec (Side Client) x.client ;
+        annotate ~side:(Side Server) @@
+        selfrec (Side Server) x.server ;
+      ]
+    | Side side ->
+      [ annotate ~side:context @@
+        exprrec (Eliom_base.Loc side) item ]
+    | Base ->
+      [ exprrec Poly item ]
+  end
 
 let mapper = object (self)
   inherit [ Context.t ] Ppx_core.Ast_traverse.map_with_context as super
@@ -227,7 +238,7 @@ let mapper = object (self)
         Section.structure
         self#structure_item
         expression_mapper#structure_item
-        str_classify
+        should_dup_str
         Shared.structure_item
     in
     let f c pstr =
@@ -255,7 +266,7 @@ let mapper = object (self)
         Section.signature
         self#signature_item
         expression_mapper#signature_item
-        sig_classify
+        should_dup_sig
         Shared.signature_item
     in
     let f c psig : (_ * signature) =
@@ -281,7 +292,7 @@ end
 
 
 let mapper' _args =
-  let c = `Noside in
+  let c = Context.Base in
   {AM.default_mapper
    with
     structure = (fun _ -> mapper#structure c) ;

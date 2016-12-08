@@ -8,6 +8,12 @@ module AC = Ast_convenience
 (** Various misc functions *)
 
 let flatmap f l = List.flatten @@ List.map f l
+let rec filter_map f = function
+  | [] -> []
+  | h::t ->
+    match f h with
+    | None -> filter_map f t
+    | Some h -> h :: filter_map f t
 
 let rec fold_accum f l acc = match l with
   | [] -> []
@@ -135,14 +141,18 @@ let eliom_fragment_attr = "eliom.client"
 (** Context convenience module. *)
 module Context = struct
 
+  type t =
+    | Side of Eliom_base.loc
+    | Shared
+    | Base
+
   let of_string s =
     let f pattern s = Ppx_core.Name.matches ~pattern s in
-    if f "eliom.server" s || f "eliom.server.start" s then `Server
-    else if f "eliom.shared" s || f "eliom.shared.start" s then `Shared
-    else if f "eliom.client" s || f "eliom.client.start" s then `Client
+    if f "eliom.server" s || f "eliom.server.start" s then Side Server
+    else if f "eliom.shared" s || f "eliom.shared.start" s then Shared
+    else if f "eliom.client" s || f "eliom.client.start" s then Side Client
     else invalid_arg "Eliom ppx: Not a context"
 
-  type t = Eliom_base.shside
 end
 
 
