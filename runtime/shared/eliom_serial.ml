@@ -10,7 +10,7 @@ module Fragment_server_repr = struct
     id: int;
     unwrapper: Eliom_wrap.unwrapper
   }
-  type 'a t = u
+  type 'a[@client] t = u
 
   let unwrap_id = 7
 
