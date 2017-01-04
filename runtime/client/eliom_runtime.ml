@@ -22,9 +22,9 @@ end
 
 (** {Logging} *)
 
-let section = Lwt_log.Section.make "eliom:client"
+let section = Lwt_log_js.Section.make "eliom:client"
 let log_section = section
-let _ = Lwt_log.Section.set_level log_section Lwt_log.Info
+let _ = Lwt_log_js.Section.set_level log_section Lwt_log_js.Info
 
 (** {Runtime} *)
 
