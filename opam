@@ -17,7 +17,11 @@ build: [
 ]
 build-doc: ["ocaml" "setup.ml" "-doc"]
 install: ["ocaml" "setup.ml" "-install"]
-remove: ["ocamlfind" "remove" "eliomlang"]
+remove: [
+  ["rm" "-rf" "%{lib}%/eliomlang"]
+  ["rm" "-rf" "%{doc}%/eliomlang"]
+]
+
 depends: [
   "ocaml" {>= "4.03.0"}
   "ocamlfind" {build}
