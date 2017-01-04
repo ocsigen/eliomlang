@@ -53,9 +53,9 @@ Library "eliom_runtime_client"
   FindlibName: client
   FindlibDirectory: client
   Path: runtime/client
-  Modules: Eliom_runtime, Eliom_wrap, Eliom_fragment
+  Modules: Eliom_runtime, Eliom_wrap, Eliom_unwrap, Eliom_fragment
   InternalModules: Eliom_serial
-  BuildDepends: js_of_ocaml, js_of_ocaml.ppx
+  BuildDepends: lwt, js_of_ocaml, js_of_ocaml.ppx, js_of_ocaml.log
   CompiledObject: byte
 
 Library "eliom_runtime_lwt"

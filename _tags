@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 2e80757df338d1560a2bb114606e578f)
+# DO NOT EDIT (digest: 692b7e4d8446e8229402b5f17bfcfb3e)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -32,7 +32,10 @@ true: annot, bin_annot
 # Library eliom_runtime_client
 "runtime/client/eliom_runtime_client.cmxs": use_eliom_runtime_client
 <runtime/client/*.ml{,i,y}>: package(js_of_ocaml)
+<runtime/client/*.ml{,i,y}>: package(js_of_ocaml.log)
 <runtime/client/*.ml{,i,y}>: package(js_of_ocaml.ppx)
+<runtime/client/*.ml{,i,y}>: package(lwt)
+<runtime/client/*.ml{,i,y}>: package(lwt.log)
 # Library eliom_runtime_lwt
 "runtime/lwt/eliom_runtime_lwt.cmxs": use_eliom_runtime_lwt
 <runtime/lwt/*.ml{,i,y}>: package(lwt)
