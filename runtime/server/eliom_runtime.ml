@@ -170,8 +170,11 @@ let escape_cdata_script s =
   (* For security reasons, we do not allow "]]>" inside CDATA
      (as this string is to be considered as the end of the cdata)
   *)
-  Printf.sprintf
-    {|\n//<![CDATA[\n%s\n//]]>\n|}
+  Printf.sprintf {|
+//<![CDATA[
+%s
+//]]>
+|}
     (Re.replace_string ~all:true closing_cdata ~by:"" s)
 
 let eliom_script global request  =
