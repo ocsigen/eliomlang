@@ -185,6 +185,7 @@ let () =
 
 
 let init () =
+  Lwt_log_core.default := Lwt_log_js.console ;
   let js_data = Request_data.get () in
 
   let onload _ _ =
