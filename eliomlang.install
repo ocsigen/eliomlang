@@ -1,0 +1,9 @@
+lib: [
+  "opam" { "opam" }
+  "runtime/client/eliom_client.js" { "client/eliom.js" }
+]
+doc: [
+  "Readme.md"
+  "?CHANGES"
+  "?LICENSE"
+]

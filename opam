@@ -12,6 +12,7 @@ build: [
   ["ocaml" "setup.ml" "-configure"
     "--enable-tests" {test}
     "--prefix" prefix
+    "--datadir" lib
   ]
   ["ocaml" "setup.ml" "-build"]
 ]
