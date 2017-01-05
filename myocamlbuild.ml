@@ -1,6 +1,6 @@
 [@@@ocaml.warning "-3"]
 (* OASIS_START *)
-(* DO NOT EDIT (digest: edb841879fce9b5959febd6cdf279ff3) *)
+(* DO NOT EDIT (digest: 371566e9bbb41f2f9f4a1e3eb338ced6) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -747,9 +747,6 @@ module MyOCamlbuildBase = struct
 (* # 110 "src/plugins/ocamlbuild/MyOCamlbuildBase.ml" *)
 
 
-  let env_filename = Pathname.basename BaseEnvLight.default_filename
-
-
   let dispatch_combine lst =
     fun e ->
       List.iter
@@ -882,7 +879,7 @@ module MyOCamlbuildBase = struct
 end
 
 
-# 884 "myocamlbuild.ml"
+# 881 "myocamlbuild.ml"
 open Ocamlbuild_plugin;;
 let package_default =
   {
@@ -904,7 +901,7 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 907 "myocamlbuild.ml"
+# 904 "myocamlbuild.ml"
 (* OASIS_STOP *)
 open Ocamlbuild_plugin
 
