@@ -22,9 +22,9 @@ end
 
 (** {Logging} *)
 
-let section = Lwt_log_js.Section.make "eliom:client"
-let log_section = section
-let _ = Lwt_log_js.Section.set_level log_section Lwt_log_js.Info
+(* let section = Lwt_log_js.Section.make "eliom:client" *)
+(* let log_section = section *)
+(* let _ = Lwt_log_js.Section.set_level log_section Lwt_log_js.Info *)
 
 (** {Runtime} *)
 
@@ -64,13 +64,13 @@ end = struct
       try
         Client_closure.find ~closure_id
       with Not_found ->
-        let pos =
+        let _pos =
           match Eliom_serial.Fragment_server_repr.loc server_value with
           | None -> ""
           | Some p -> Printf.sprintf "(%s)" (pos_to_string p) in
-        Lwt_log_js.ign_error_f ~section
-          "Client closure %s not found %s (is the module linked on the client?)"
-          closure_id pos ;
+        (* Lwt_log_js.ign_error_f ~section *)
+        (*   "Client closure %s not found %s (is the module linked on the client?)" *)
+        (*   closure_id pos ; *)
         exit 1
     in
     let value = closure args in
@@ -96,7 +96,7 @@ end = struct
 
   let initialize ~compilation_unit_id
       {Eliom_serial. id; value } =
-    Lwt_log_js.ign_debug_f ~section "Initialize injection %d" id;
+    (* Lwt_log_js.ign_debug_f ~section "Initialize injection %d" id; *)
     (* BBB One should assert that injection_value doesn't contain any
        value marked for late unwrapping. How to do this efficiently? *)
     Jstable.add table
@@ -167,8 +167,8 @@ module Request_data = struct
     eliom_data := Some v
 
   let load request_data =
-    Lwt_log_js.ign_debug_f ~section "Load request data (%a)"
-      (fun () l -> string_of_int (Array.length l)) request_data;
+    (* Lwt_log_js.ign_debug_f ~section "Load request data (%a)" *)
+    (*   (fun () l -> string_of_int (Array.length l)) request_data; *)
     (* On a request, i.e. after running the toplevel definitions, global_data
        must contain at most empty sections_data lists, which stem from server-
        only eliom files. *)
@@ -185,7 +185,7 @@ let () =
 
 
 let init () =
-  Lwt_log_core.default := Lwt_log_js.console ;
+  (* Lwt_log_core.default := Lwt_log_js.console ; *)
   let js_data = Request_data.get () in
 
   let onload _ _ =
@@ -203,33 +203,33 @@ let init () =
 
 
 let close_server_section compilation_unit_id =
-  Lwt_log_js.ign_debug_f ~section
-    "Do next client value data section in compilation unit %s"
-    compilation_unit_id;
+  (* Lwt_log_js.ign_debug_f ~section *)
+  (*   "Do next client value data section in compilation unit %s" *)
+  (*   compilation_unit_id; *)
   Global_data.apply compilation_unit_id @@ fun data ->
   match data.server with
     l :: r ->
     data.server <- r;
     Array.iter Fragment.initialize l
   | [] ->
-    Lwt_log_js.ign_error_f ~section
-      "Queue of client value data for compilation unit %s is empty \
-       (is it linked on the server?)"
-      compilation_unit_id ;
+    (* Lwt_log_js.ign_error_f ~section *)
+    (*   "Queue of client value data for compilation unit %s is empty \ *)
+    (*    (is it linked on the server?)" *)
+    (*   compilation_unit_id ; *)
     exit 1
 
 let open_client_section compilation_unit_id =
-  Lwt_log_js.ign_debug_f ~section
-    "Do next injection data section in compilation unit %s"
-    compilation_unit_id;
+  (* Lwt_log_js.ign_debug_f ~section *)
+  (*   "Do next injection data section in compilation unit %s" *)
+  (*   compilation_unit_id; *)
   Global_data.apply compilation_unit_id @@ fun data ->
   match data.client with
     l :: r ->
     data.client <- r;
     Array.iter (fun i -> Injection.initialize ~compilation_unit_id i) l
   | [] ->
-    Lwt_log_js.ign_error_f ~section
-      "Queue of injection data for compilation unit %s is empty \
-       (is it linked on the server?)"
-      compilation_unit_id ;
+    (* Lwt_log_js.ign_error_f ~section *)
+    (*   "Queue of injection data for compilation unit %s is empty \ *)
+    (*    (is it linked on the server?)" *)
+    (*   compilation_unit_id ; *)
     exit 1

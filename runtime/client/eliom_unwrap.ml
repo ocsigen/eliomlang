@@ -34,9 +34,9 @@ let get_obj_copy map o = Js.Optdef.to_option ( map##get(o) )
 let set_obj_copy map o c = map##set(o,c)
 *)
 
-let section = Lwt_log_js.Section.make "eliom.unwrap"
-let log_section = section
-let _ = Lwt_log_js.Section.set_level section Lwt_log_js.Info
+(* let section = Lwt_log_js.Section.make "eliom.unwrap" *)
+(* let log_section = section *)
+(* let _ = Lwt_log_js.Section.set_level section Lwt_log_js.Info *)
 
 let option_map f = function
   | None -> None
