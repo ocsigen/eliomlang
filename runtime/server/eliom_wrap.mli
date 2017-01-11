@@ -27,7 +27,10 @@ type +'a wrapper
     value [v] will be replaced by [f v] before marshaling. *)
 val create_wrapper : ( 'a -> 'b ) -> 'a wrapper
 
-(** marshal a value, taking into account the tags. *)
+(** This function should always be used to marshal things that
+    will be unmarshaled by {!Eliom_unwrap.unwrap_js}.
+*)
+val marshal : 'a -> string
 
 (* == Internals
 

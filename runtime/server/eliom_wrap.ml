@@ -200,3 +200,8 @@ let empty_unwrapper =
     umark = Mark.do_nothing_mark }
 
 let wrap v = to_poly Mark.unwrap_mark, Obj.obj (search_and_replace (Obj.repr v))
+
+
+let marshal data =
+  let x = (Mark.unwrap_mark, data) in
+  Marshal.to_string x []

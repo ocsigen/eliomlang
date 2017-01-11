@@ -184,7 +184,7 @@ let eliom_script global request  =
     Printf.sprintf
       "%s = \'%s\';"
       Eliom_serial.eliom_data_id
-      (string_escape (Marshal.to_string data []))
+      (string_escape @@ Eliom_wrap.marshal data)
   in
   escape_cdata_script script
 

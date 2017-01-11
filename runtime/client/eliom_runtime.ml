@@ -142,13 +142,13 @@ module Request_data = struct
       request = [||];
     }
 
-  let eliom_data = ref None
+  let eliom_data  : Eliom_serial.eliom_data option ref = ref None
 
   let get () =
     match !eliom_data with
     | Some data -> data
     | None ->
-      let eliom_request_data =
+      let eliom_request_data : Js.js_string Js.t =
         Js.Unsafe.get Js.Unsafe.global @@
         Js.string Eliom_serial.eliom_data_id
       in
