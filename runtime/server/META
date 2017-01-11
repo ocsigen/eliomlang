@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 1f448d1b6649f9e23ede07a35d4e57ce)
+# DO NOT EDIT (digest: 6592f0d9ef5f1af857e95edff8cb9126)
 package "runtime" (
  description = "Virtual container"
  package "server" (
@@ -28,7 +28,7 @@ package "runtime" (
   version = "0.1.0"
   description = "Eliomlang"
   directory = "client"
-  requires = "lwt js_of_ocaml js_of_ocaml.ppx js_of_ocaml.log"
+  requires = "lwt js_of_ocaml js_of_ocaml.ppx"
   archive(byte) = "eliom_runtime_client.cma"
   archive(byte, plugin) = "eliom_runtime_client.cma"
   exists_if = "eliom_runtime_client.cma"
